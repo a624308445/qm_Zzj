@@ -1,1 +1,81 @@
-fasfasfasfasfasfa
+const {
+  getPosterDetails
+} = require('../../../service/api')
+import {
+  getJt
+} from '../../../utils/getuserInfo.js'
+const {
+  _formatterTime
+} = require('../../../utils/util')
+const { showErrorToast } = require('../../../utils/util')
+Page({
+  data: {
+    topImg: '../../static/images/top.png',
+    downImg: '../../static/images/top.png',
+    posterId: null,
+    pageData:[],
+    canvasImagePath: '',
+  },
+  onLoad: function (options) {
+    const {
+      posterId
+    } = options
+    console.log(posterId, 'posterId');
+    this.setData({
+      posterId
+    })
+
+  },
+  onShow() {
+    getJt().then(res => {
+      this.getDetails()
+    })
+  },
+  getDetails() {
+    getPosterDetails({posterId:this.data.posterId}).then(res => {
+      this.selectComponent("#hikminiLoading").show()
+      if(res.code === '0' && res.code) {
+        this.selectComponent("#hikminiLoading").hide()
+        let data = res.data
+        console.log(data,'cccc');
+        data.createTime = data.createTime ? _formatterTime(data.createTime, '-', 'short') : '';
+        let yesterdayAccessPersonCount = res.data.yesterdayAccessPersonCount?res.data.yesterdayAccessPersonCount:0;//访问次数
+        let todayAccessCount = res.data.todayAccessCount?res.data.todayAccessCount:0;
+
+        let yesterdayAccessCount = res.data.yesterdayAccessCount?res.data.yesterdayAccessCount:0;//访问人数
+        let todayAccessPersonCount = res.data.todayAccessPersonCount?res.data.todayAccessPersonCount:0;
+        console.log(yesterdayAccessPersonCount)
+        console.log(yesterdayAccessCount)
+        let accesOrder = yesterdayAccessPersonCount<todayAccessCount?
+        (todayAccessCount-yesterdayAccessPersonCount)/yesterdayAccessPersonCount*100:(yesterdayAccessPersonCount-todayAccessCount)/todayAccessCount*100
+        let accesOrderFlag = yesterdayAccessPersonCount<todayAccessCount?true:false
+
+        let personOrder = Math.round(todayAccessPersonCount/yesterdayAccessCount*100)
+        let personOrderFlag = todayAccessPersonCount<yesterdayAccessCount?true:false
+        
+        let obj = {
+          accesOrder:accesOrder,//次数率
+          accesOrderFlag:accesOrderFlag,//true上涨,false下降
+          personOrder:personOrder,//人数率
+          personOrderFlag:personOrderFlag//true上涨,false下降
+        }
+        this.setData({
+          pageData:data,
+          ...obj
+        })
+        console.log('次数率'+this.data.accesOrder)
+        console.log('人数率'+this.data.personOrder)
+      } else {
+        this.selectComponent("#hikminiLoading").hide()
+        showErrorToast(res.message)
+    }
+    })
+  },
+
+  jumpRecord() {
+    console.log(this.data.posterId, 'id');
+    wx.navigateTo({
+      url: '/packagemyPoster/pages/poster/posterOverview',
+    })
+  }
+})
