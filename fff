@@ -79,3 +79,62 @@ Page({
     })
   }
 })
+
+ downloadFile () {
+      let options = {
+        fileKey: this.templateUrl,
+        fileName: '权限系统用户导入模板.xlsx'
+      }
+      downloadFile(options).then(res => {
+        const r = new FileReader()
+        let that = this
+        console.log('downloadFile -> res', res)
+        r.onload = function () {
+        // 有可能下载失败，比如返回{code: -1},但设置了responseType: 'blob'，axios会把res强制转为blob，拿不到res.code
+        // 解决：将已转为blob类型的data转回json格式，判断是否下载成功
+        // 如果JSON.parse(this.result)不报错，说明this.result是json字符串，则可以推测是下载报错情况下返回的对象，类似于{code: 0}
+        // 如果JSON.parse(this.result)报错，说明是下载成功，返回的二进制流，则进入catch进行后续处理
+          try {
+            const resData = JSON.parse(this.result) // this.result为FileReader获取blob数据转换为json后的数据，即后台返回的原始数据
+            console.log('downloadFile -> resData', resData)
+            // 如果执行到这里，说明下载报错了，进行后续处理
+            that.$message.error(resData.message)
+          } catch (err) {
+            // 下载正常处理
+            that.download(res, '权限系统用户导入模板.xlsx')
+          }
+        }
+        r.readAsText(res) // FileReader的API
+      })
+    },
+    download (res, fileName) {
+      // 兼容ie11
+      if (window.navigator.msSaveOrOpenBlob) {
+        try {
+          const blobObject = new Blob([res])
+          window.navigator.msSaveOrOpenBlob(blobObject, fileName)
+        } catch (e) {
+          console.log(e)
+        }
+        return
+      }
+      // a标签实现下载
+      let blob = new Blob([res])
+      console.log('download -> blob', blob)
+      let link = document.createElement('a')
+      let href = window.URL.createObjectURL(blob) // 创建下载的链接
+      link.style.display = 'none'
+      link.href = href
+      link.download = fileName // 下载后文件名
+      document.body.appendChild(link)
+      link.click() // 点击下载
+      document.body.removeChild(link) // 下载完成移除元素
+      window.URL.revokeObjectURL(href) // 释放掉blob对象
+    },
+    
+    export const downloadFile = options => {
+  return axios.post('/api/file/downloadByKey', options, {
+    responseType: 'blob'
+  })
+}
+
