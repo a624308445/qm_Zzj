@@ -137,4 +137,25 @@ Page({
     responseType: 'blob'
   })
 }
-
+beforeImgUpload (file) {
+      // 图片上传前
+      let isImg =
+        file.type === 'image/jpeg' ||
+        file.type === 'image/png' ||
+        file.type === 'image/jpg'
+      let message = '上传图片只支持 JPEG/JPG/PNG 格式!'
+      let isLt5 = file.size / 1024 / 1024 < 5
+      if (!isImg) {
+        this.$message.error(message)
+        return false
+      }
+      if (!isLt5) {
+        this.$message.error('上传图片大小不能超过 5MB!')
+        return false
+      }
+      if (file.size === 0) {
+        this.$message.error('不能上传空文件!')
+        return false
+      }
+      return isImg && isLt5
+    },
