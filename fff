@@ -159,3 +159,15 @@ beforeImgUpload (file) {
       }
       return isImg && isLt5
     },
+div class="coverimg" :class="['coverimg' + item.materialStatus]">
+              <div>{{ item.materialStatus ? "已上架" : "已下架" }}</div>
+            </div>
+              .coverimg1 {
+            background-color: rgba(51, 204, 102, 1);
+            color: white;
+          }
+          .coverimg0,
+          .coverimg2 {
+            background-color: rgba(242, 242, 242, 1);
+            color: #ccc !important;
+          }
