@@ -1,0 +1,912 @@
+/*
+ * @Description: 
+ * @Author: 李敏
+ * @Date: 2020-07-20 16:10:49
+ * @LastEditTime: 2021-08-04 10:36:06
+ * @LastEditors: zhangfeng
+ */
+import {
+  addTrack
+} from '../../utils/track/track'
+let api = require('../../service/api.js')
+const {
+  getJt,
+  checkUserAuth2RegisterOr2Auth
+} = require('../../utils/getuserInfo.js')
+const {
+  getEnv,
+  showErrorToast,
+  compressImgUrl,
+  isClTracker
+} = require('../../utils/util')
+import {
+  officailAccountBehavior
+} from '../../utils/behavior/officailAccount'
+const AES = require('../../lib/cryptojs/aes')
+let app = getApp();
+Page({
+  behaviors: [officailAccountBehavior],
+  data: {
+    showSkeleton: true,
+    rightsize: '10rpx',
+    bannerList: [],
+    tabsList: [{
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/f04f75b3-3021-4da8-96a0-bb3f660a989f.png',
+        name: '智涌钱塘',
+        url: '/packageDiscovery/pages/channelDetail/channelDetail?id=15'
+      },
+      // {
+      //   src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/0a4c2414-3ee2-46ec-b56c-801e2cbaf2eb.png',
+      //   name: '园区导览',
+      //   url: "/pages/my/my"
+      // },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/0191732a-dfb1-4fa4-83bc-654d220389e9.png',
+        name: '数智展厅',
+        url: '/packageExhibition/pages/home/home'
+        // url: "/pages/webView/webView"
+      },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-06/58b8b35d-7913-481d-b88a-0dfc626d737d.png',
+        name: '精彩活动',
+        url: "/packageActivity/pages/wonderfulActivity/wonderfulActivityList/wonderfulActivityList"
+      },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/700eee18-379d-4b65-ad13-c29acacfbac7.png',
+        name: '订单查询',
+        url: "/packageOrder/pages/orderList/orderList?state=0"
+      },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/80fdbc87-1369-4105-93f4-e58d44d23a00.png',
+        name: '项目自助',
+        url: "/pages/itemHelp/itemHelpGuide/itemHelpGuide"
+      },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/770a8b2b-03fe-4877-b8ff-4226ad4a3b4f.png',
+        name: '安防工具',
+        url: "/pages/securityCalc/securityCalc"
+      },
+      // WTODO | Name:gaoq | Remark:20210706 临时注释待查耀东需求变更
+      // {
+      //   src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-04/21973687-d525-48ad-b3f7-63d86a3a7cae.png',
+      //   name: '服务支持',
+      //   url: "/packageDelivery/pages/deliveryGuide/deliveryGuide"
+      // },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/0374def4-77f1-438e-9b64-4c4d22bf62ff.png',
+        name: '前端选型',
+        url: "/pages/my/my"
+      },
+      {
+        src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/1a5781c6-a6ae-4365-9c93-3b47eae35caf.png',
+        name: '维修申请',
+        url: "/pages/webView/webView"
+      },
+      // {
+      //   src: 'https://hik-b2b.s3.cn-north-1.amazonaws.com.cn/hikdmp/electronic/attach/prod/2021-03/fd56e56e-de9c-4882-95ae-35508b1e424f.png',
+      //   name: '密码恢复',
+      //   url: "/pages/webView/webView"
+      // }
+    ],
+    videoList: [],
+    activeTab: '1',
+    showhotSolution: true,
+    showhotCase: false,
+    indicatorDots: true,
+    autoplay: true,
+    interval: 5000,
+    duration: 500,
+    indicatorColor: '#eee',
+    indicatorActiveColor: '#F02C38',
+    hardList: [], // 硬件
+    softList: [], // 软件
+    hotSolution: [], // 方案
+    hotCase: [], // 案例
+    // scrollHeight: '',
+    allSoluTotal: 0, // 方案总数
+    allCaseTotal: 0, // 案例总数
+    solupage: 1, // 当前页数  默认是1
+    casepage: 1, // 当前页数  默认是1
+    lastsoluPage: false,
+    lastcasePage: false,
+    showDialog: false,
+    homeoverflow: 'unset',
+    homeheight: 'auto',
+    defaulteImg: '/static/images/public/defaulteProductImg.png',
+    newIcon: '/static/images/public/new.png',
+    beginTime: '',
+    isShow: false,
+    popupInfo: {},
+    sharerUnionid: ''
+  },
+  /**
+   * 生命周期函数--监听页面加载
+   */
+  touchstart(e) {
+    this.setData({
+      rightsize: '-50rpx'
+    })
+  },
+  touchend() {
+    setTimeout(() => {
+      this.setData({
+        rightsize: '10rpx'
+      })
+    }, 1000)
+  },
+  onPullDownRefresh: function () {
+    this.setData({
+      showSkeleton: true,
+      activeTab: '1',
+      showhotSolution: true,
+      showhotCase: false,
+      bannerList: [],
+      videoList: [],
+      hardList: [], // 硬件
+      softList: [], // 软件
+      hotSolution: [], // 方案
+      hotCase: [], // 案例
+      solupage: 1, // 当前页数  默认是1
+      casepage: 1, // 当前页数  默认是1
+      lastsoluPage: false,
+      lastcasePage: false
+    }, () => {
+      getJt().then(res => {
+        this.getAlldata()
+      })
+    })
+  },
+  onHide: function () {
+    addTrack('101001000', {
+      beginTime: this.data.beginTime,
+      endTime: new Date().getTime(),
+      sharerUnionid: this.data.sharerUnionid
+    })
+  },
+  onUnload: function () {
+    addTrack('101001000', {
+      beginTime: this.data.beginTime,
+      endTime: new Date().getTime(),
+      sharerUnionid: this.data.sharerUnionid
+    })
+  },
+  onShow: function () {
+    this.setData({
+      beginTime: new Date().getTime()
+    })
+    getJt().then(res => {
+      this.selectComponent("#hikminiLoading").show()
+      this.getAlldata('ignore')
+      this.updateLoginStatus()
+      this.isAlertUpdateCategory()
+    })
+  },
+  onLoad: function (options) {
+    console.log(options)
+    const {
+      sharerUnionid
+    } = options
+    this.setData({
+      sharerUnionid
+    })
+    this.selectComponent("#hikminiLoading").show()
+    // getJt().then(res => {
+    //   this.getAlldata()
+    // })
+  },
+  getAlldata(flag) {
+    this.getbannerList()
+    this.getfeaturevideoList()
+    this.gethardwareList()
+    this.getsoftwareList(1, 1)
+    try {
+      this.getWxAppUserAllInfo()
+    } catch (error) {
+      console.error(error)
+    }
+    if (flag === 'ignore' && this.data.hotSolution.length) {
+      return
+    }
+    this.getsoftwareList(2, 1)
+    this.getsoftwareList(3, 1)
+  },
+  getWxAppUserAllInfo() {
+    api.getWxAppUserAllInfo().then(res => {
+      if (res.code === '0') {
+        let appScene = String(wx.getStorageSync('appScene'))
+        this.setData({
+          showOfficailAccount: res.data.subscribe === 0 && (appScene === '1047' || appScene === '1089' || appScene === '1038')
+        })
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.log('判断是否关注接口异常', error)
+    })
+  },
+  isAlertUpdateCategory() { // 是否弹出兴趣标签弹窗
+    console.log(app.globalData.panduan)
+    if (app.globalData.showFlag) {
+      api.isPopupInterestTag().then(res => {
+        if (res.code === '0') {
+          this.setData({
+            showDialog: res.data ? true : false
+          })
+          app.globalData.showFlag = false
+          if (this.data.showDialog === false) {
+            this.isAlertAdvertisement()
+          }
+        } else {
+          showErrorToast(res.message)
+        }
+      }).catch(error => {
+        console.log('判断是否弹兴趣标签接口异常', error)
+      })
+    }
+  },
+  closeDialog() { // 关闭广告弹窗
+    this.setData({
+      isShow: false
+    })
+  },
+  isAlertAdvertisement() { // 判断是否弹窗广告
+    api.isShowAdvertPopup().then(res => {
+      if (res.code === '0') {
+        this.setData({
+          popupInfo: res.data.popupInfo,
+          isShow: res.data.isPopup ? true : false
+        })
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.log('判断是否弹广告弹窗接口异常', error)
+    })
+  },
+  changeDialog(val) { // 关闭兴趣标签弹窗
+    this.setData({
+      homeheight: val.detail.homeheight,
+      homeoverflow: val.detail.homeoverflow,
+      showDialog: val.detail.showDialog
+    })
+    if (this.data.showDialog === false) {
+      this.isAlertAdvertisement()
+    }
+  },
+  advertisingJump(e) { // 广告跳转
+    let isRegister = Number(wx.getStorageSync('isRegister')) === 1
+    let item = e.currentTarget.dataset.item
+    console.log(item,skiptype);
+    // [{type: 0, name: '不跳转'}, {type: 1, name: '商品'}, {type: 2, name: '方案'}, {type: 3, name: '案例'}, {type: 4, name: '频道'}, {type: 5, name: '文章'}, {type: 6, name: '视频'}, {type: 7, name: '主体'}, {type: 8, name: '链接'}, {type: 9, name: '电子物料'}]
+    switch (item.skipType) {
+      case 0:
+break;
+      case 1:
+        wx.navigateTo({
+          url: `/pages/productPage/pages/productDetail/productDetail?id=${item.skipObject}`
+        });
+        break;
+      case 2:
+        wx.navigateTo({
+          url: `/packageSolutionCase/pages/solution/solutionDetail/solutionDetail?id=${item.skipObject}`
+        });
+        break;
+      case 3:
+        wx.navigateTo({
+          url: `/packageSolutionCase/pages/case/caseDetail/caseDetail?id=${item.skipObject}`
+        });
+        break;
+      case 4:
+        wx.navigateTo({
+          url: `/packageDiscovery/pages/channelDetail/channelDetail?id=${item.skipObject}`
+        });
+        break;
+      case 5:
+        if (item.bannerRelateObject && item.bannerRelateObject.publishType === 1) {
+          wx.setStorageSync('businesswebviewurl', item.bannerRelateObject.articleWxUrl)
+          wx.navigateTo({
+            url: '/packageDiscovery/pages/webView/webView?name=' + item.bannerRelateObject.title
+          })
+        } else if (item.bannerRelateObject && item.bannerRelateObject.publishType === 0) {
+          wx.navigateTo({
+            url: `/packageDiscovery/pages/articleDetail/articleDetail?id=${item.skipObject}`
+          })
+        }
+        break;
+      case 6:
+        wx.navigateTo({
+          url: `/packageDiscovery/pages/videoDetail/videoDetail?id=${item.skipObject}`
+        });
+        break;
+      case 7:
+        wx.navigateTo({
+          url: `/packageDiscovery/pages/subjectDetail/subjectDetail?id=${item.skipObject}`
+        });
+        break;
+      case 8:
+        wx.setStorageSync('businesswebviewurl', item.skipObject)
+        wx.navigateTo({
+          url: '/pages/webView/webView'
+        })
+        break;
+      case 9:
+        wx.navigateTo({
+          url: `/pages/productPage/pages/softwareDetail/softwareDetail?id=${item.skipObject}`
+        });
+        break;
+        case 10: 
+        wx.navigateTo({ url: '/' + item.skipObject })
+        break
+    }
+    addTrack('110001001', {
+      id: item.skipObject,
+      name: item.title,
+      type: item.skipType
+    })
+    this.setData({
+      isShow: false
+    })
+  },
+  onReachBottom() {
+    this.loadMore()
+  },
+  getbannerList() {
+    api.getbannerList().then(res => {
+      if (res.code === '0') {
+        this.setData({
+          bannerList: compressImgUrl(res.data, 'fileUrl', 0, 240)
+        })
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.error(error)
+    })
+  },
+  // 获取精选视频
+  getfeaturevideoList() {
+    api.getfeaturevideoList().then(res => {
+      if (res.code === '0') {
+        let newData = res.data
+        newData.map(item => {
+          let hourTime = item.videoTime.split(':')[0] == '00' ? '' : item.videoTime.split(':')[0] + "'"
+          let minTime = item.videoTime.split(':')[1]
+          let secondTime = item.videoTime.split(':')[2]
+          item.videoTime = hourTime + minTime + "'" + secondTime
+        })
+        this.setData({
+          videoList: compressImgUrl(newData, 'thumbUrl', 250, 160, 100)
+        })
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.error(error)
+    })
+  },
+  gethardwareList(type) {
+    let params = {
+      pageNum: 1,
+      pageSize: 9
+    }
+    api.gethardwareList(params).then(res => {
+      if (res.code === '0') {
+        let data = res.data.list
+        this.setData({
+          hardList: compressImgUrl(data.slice(0, 8), 'externalImageUrl', 144, 144)
+        })
+      } else {
+        showErrorToast(res.message)
+      }
+    })
+  },
+  loadMore() {
+    if (this.data.activeTab === '1' && !this.data.lastsoluPage) {
+      this.selectComponent("#hikminiLoading").show()
+      this.getsoftwareList(2, this.data.solupage)
+    }
+    if (this.data.activeTab === '2' && !this.data.lastcasePage) {
+      this.selectComponent("#hikminiLoading").show()
+      this.getsoftwareList(3, this.data.casepage)
+    }
+  },
+  // 软件 方案 案例
+  getsoftwareList(type, pageNum) {
+    let params, questApi
+    if (type === 1) {
+      params = {
+        materalType: 1,
+        pageNum: pageNum,
+        pageSize: 9
+      }
+      questApi = api.getsoftwareList
+    } else if (type === 2) {
+      // 方案
+      questApi = api.getNewfeatureSolution
+      params = {
+        pageNum: pageNum,
+        pageSize: 10
+      }
+    } else if (type === 3) {
+      // 案例
+      questApi = api.getNewfeatureCase
+      params = {
+        pageNum: pageNum,
+        pageSize: 10
+      }
+    }
+    questApi(params).then(res => {
+      if (res.code === '0') {
+        let data = res.data && res.data.list ? res.data.list : []
+        if (type === 1) {
+          this.selectComponent("#hikminiLoading").hide()
+          this.setData({
+            softList: compressImgUrl(data.slice(0, 8), 'thumbnailUrl', 144, 144)
+          })
+          this.selectComponent("#hikminiLoading").hide()
+        } else if (type === 2) {
+          this.setData({
+            hotSolution: this.data.hotSolution.concat(compressImgUrl(res.data.data.list, 'imageUrl', 208, 160)),
+            allSoluTotal: res.data.data.total,
+          })
+          if (this.data.hotSolution.length >= res.data.data.total || this.data.solupage === res.data.data.totalNum) { // 到底了
+            this.setData({
+              lastsoluPage: true
+            })
+          } else {
+            this.setData({
+              solupage: this.data.solupage + 1
+            })
+          }
+          this.selectComponent("#hikminiLoading").hide()
+          this.setData({
+            showSkeleton: false
+          })
+        } else if (type === 3) {
+          let nData = data.map(item => {
+            if (item.profile !== undefined && item.profile !== null) {
+              item.profile = item.profile.trim()
+            }
+            return item
+          })
+          this.setData({
+            hotCase: this.data.hotCase.concat(compressImgUrl(nData, 'externalCoverUrl', 208, 160)),
+            allCaseTotal: res.data.total,
+          })
+          wx.stopPullDownRefresh() // 停止下拉刷新
+          if (this.data.hotCase.length >= res.data.total || this.data.casepage === res.data.totalNum) { // 到底了
+            this.setData({
+              lastcasePage: true
+            })
+          } else {
+            this.setData({
+              casepage: this.data.casepage + 1
+            })
+          }
+          this.selectComponent("#hikminiLoading").hide()
+          this.setData({
+            showSkeleton: false
+          })
+        }
+      } else {
+        if (type === 2 || type === 3) {
+          if (type === 3) {
+            wx.stopPullDownRefresh() // 停止下拉刷新 
+          }
+        }
+        this.setData({
+          showSkeleton: false
+        })
+        showErrorToast(res.message)
+      }
+      this.selectComponent("#hikminiLoading").hide()
+    }).catch(err => {
+      if (type === 3) {
+        wx.stopPullDownRefresh() // 停止下拉刷新 
+      }
+      this.selectComponent("#hikminiLoading").hide()
+      this.setData({
+        showSkeleton: false
+      })
+    })
+  },
+  goSearch(e) {
+    addTrack('101005001')
+    wx.navigateTo({
+      url: `/pages/search/search?title=产品中心`
+    })
+  },
+  // 页面点击详情
+  detailClick(e) {
+    let item = e.currentTarget.dataset.item
+    console.log('e.currentTarget.dataset.item: ', item)
+    let id = e.currentTarget.dataset.item.id
+    let type = e.currentTarget.dataset.type
+    console.log(id, type)
+    if (type === 'hard' && id) {
+      addTrack('101004001', {
+        id: item.hardwareId,
+        name: item.hardwareName
+      })
+      this.toDetail(4, e.currentTarget.dataset.item.hardwareId)
+    } else if (type === 'soft' && id) {
+      addTrack('101004003', {
+        id: item.materialId,
+        name: item.materialName
+      })
+      this.toDetail(1, e.currentTarget.dataset.item.materialId)
+    } else if (type === 'video') {
+      addTrack('101001015', {
+        id: id,
+        name: item.name
+      })
+      wx.navigateTo({
+        url: `/pages/videoplaza/videodetail/videodetail?id=${id}`
+      })
+    } else if (type === 'solution') {
+      addTrack('101006002', {
+        id: item.solutionId,
+        name: item.name
+      })
+      this.toDetail(2, e.currentTarget.dataset.item.solutionId)
+    } else if (type === 'case') {
+      addTrack('101006004', {
+        id: id,
+        name: item.title
+      })
+      this.toDetail(3, id)
+    }
+  },
+  toDetail(type, id) {
+    let url = ''
+    switch (Number(type)) {
+      case 1:
+        url = `/pages/productPage/pages/softwareDetail/softwareDetail?id=${id}`;
+        break; // 软件
+      case 2:
+        url = `/packageSolutionCase/pages/solution/solutionDetail/solutionDetail?id=${id}`;
+        break; // 方案
+      case 3:
+        url = `/packageSolutionCase/pages/case/caseDetail/caseDetail?id=${id}`;
+        break; // 成功案例
+      case 4:
+        url = `/pages/productPage/pages/productDetail/productDetail?id=${id}`;
+        break; // 商品
+    }
+    wx.navigateTo({
+      url
+    })
+  },
+  // 轮播事件
+  bannerClick(e) {
+    let isRegister = Number(wx.getStorageSync('isRegister')) === 1
+    let item = e.currentTarget.dataset.item
+    console.log('bannerClick item ', item)
+    if (item.detialUrl) {
+      let arr = item.detialUrl.split('&')
+      let temp = {}
+      arr.forEach(element => {
+        temp[element.split('=')[0]] = element.split('=')[1]
+      })
+      console.log('temp: ', temp)
+      if (temp.url) {
+        addTrack('101001001', {
+          id: temp.url,
+          name: temp.name || '',
+          type: temp.type
+        })
+        wx.navigateTo({
+          url: temp.url,
+        })
+      } else {
+        // 兼容materialType和type
+        let type = temp.materialType || temp.type
+        type = type === undefined ? '' : type
+        console.log('bannerClick temp ', temp)
+        addTrack('101001001', {
+          id: temp.id,
+          name: temp.name,
+          type: type
+        })
+        isClTracker(temp.id) && app.cl_tracker.track(
+          'c_click_banner', {
+            c_mpName: app.globalData.appName,
+            c_bannerName: temp.name || '',
+          },
+        )
+        if ((type === '') && !temp.id) {
+          // 固定跳转我的订单
+          getJt().then(res => {
+            this.checkLoginStatus({}, '/packageOrder/pages/orderList/orderList?state=0')
+          })
+        } else {
+          console.log('type: ', type)
+          switch (Number(type)) {
+            case 0:
+              break;
+            case 1:
+              temp.id ? wx.navigateTo({
+                url: `/pages/productPage/pages/productDetail/productDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 2:
+              temp.id ? wx.navigateTo({
+                url: `/packageSolutionCase/pages/solution/solutionDetail/solutionDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 3:
+              temp.id ? wx.navigateTo({
+                url: `/packageSolutionCase/pages/case/caseDetail/caseDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 4:
+              temp.id ? wx.navigateTo({
+                url: `/packageDiscovery/pages/channelDetail/channelDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 5:
+              if (temp.id) {
+                wx.navigateTo({
+                  url: `/packageDiscovery/pages/articleDetail/articleDetail?id=${temp.id}`
+                })
+              }
+              break;
+            case 6:
+              if (temp.id) {
+                wx.navigateTo({
+                  url: `/packageDiscovery/pages/videoDetail/videoDetail?id=${temp.id}`
+                })
+              }
+              break;
+            case 7:
+              temp.id ? wx.navigateTo({
+                url: `/packageDiscovery/pages/subjectDetail/subjectDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 8:
+              this.jumpH5(item.detialUrl)
+              break;
+            case 9:
+              temp.id ? wx.navigateTo({
+                url: `/pages/productPage/pages/softwareDetail/softwareDetail?id=${temp.id}`
+              }) : '';
+              break;
+            case 10:
+              let tempUrl = item.detialUrl.slice(5);
+              if (tempUrl) {
+                tempUrl = tempUrl.slice(0, tempUrl.lastIndexOf('id') - 1)
+                wx.navigateTo({
+                  url: '/' + tempUrl
+                })
+              }
+              break;
+          }
+        }
+      }
+    }
+  },
+  jumpH5(parmastring) {
+    console.log(parmastring, 'parmastring')
+    // 截取“name=”后字符串
+    let url = parmastring.slice(5)
+    if (!url) {
+      return
+    }
+    // banner数据始终会带id参数，若链接存在多个id，以最后一个id为分界
+    url = url.slice(0, url.lastIndexOf('id') - 1)
+    console.log(url, 'url')
+    let webviewTitle = ''
+    if (url.includes('bestcem')) {
+      webviewTitle = '?name=问卷'
+    }
+    wx.setStorageSync('businesswebviewurl', url)
+    wx.navigateTo({
+      url: '/pages/webViewShare/webView' + webviewTitle
+    })
+  },
+  moreClick(e) {
+    let moreItem = e.currentTarget.dataset.more
+    if (moreItem === 'video') {
+      addTrack('101001014')
+      wx.navigateTo({
+        url: "/pages/videoplaza/videoplaza"
+      })
+    } else if (moreItem === 'product') {
+      addTrack('101004002')
+      wx.navigateTo({
+        url: "/pages/productPage/pages/moreProduct/moreProduct",
+      })
+    }
+  },
+  toOtherClick(e) {
+    let name = e.currentTarget.dataset.item.name
+    if (name === '前端选型') {
+      addTrack('101001005')
+      wx.navigateToMiniProgram({
+        appId: 'wx62dac769460a8083',
+        envVersion: 'release'
+      })
+    } else if (name === '服务支持') {
+      getJt().then(res => {
+        wx.navigateTo({
+          url: '/packageDelivery/pages/deliveryGuide/deliveryGuide',
+        })
+      })
+    }
+    // else if (name === '园区导览') {
+    //   // addTrack('101001005')
+    //   wx.navigateToMiniProgram({
+    //     appId: 'wx3e051b71b666763d',
+    //     path: 'pages/index/index',
+    //     envVersion: 'release'
+    //   })
+    // } 
+    else if (name === '数智展厅') {
+      addTrack('101001016')
+      wx.navigateTo({
+        url: e.currentTarget.dataset.item.url
+      })
+      // let userName = wx.getStorageSync('fansName')
+      // // let newjt = 'eyJhbGciOiJSUzI1NiJ9.eyJvcGVuSWQiOiJvUEdhbHVCWW1tR2JmMU10N2YtS1d2R0dHWk5rIiwidW5pb25JZCI6Im8zZmdzdzZIcUhNM2tyX29tdVBTQmVpcHFZWUEiLCJzb3VyY2UiOiIxIiwiaGVhZGltZ3VybCI6Imh0dHA6Ly90aGlyZHd4LnFsb2dvLmNuL21tb3Blbi92aV8zMi84M2Nlbll0M09ONTZpYlRXU0JKeWpmQW5ZY2NLTFEyWWx0d3JWY0ZmcDdRVkhka3B5MGljRzkydzcxVHBOdjNBd1V5YWxRY0NaTlh3RXMxRXVPTnI1VmFRLzEzMiIsImV4cCI6MTU5OTY2MjU5OH0.cOGm9bqwgGGex0LSFkh2eRmT5HEMixQdFndCobNbKaqSBz3OtnYoipSowk0Zbu7na-nr7pyKmRc37Cq0kILL-FjD9OJ_gED4lCDI1m5T4a4e5LYhCK19kBKmwXjrlKGOl-JBcFsYY3iwXdq1Dl2y3mNb2OWJ9OV0NApKFUDDWrY'
+      // // let jt = AES.encrypt(newjt, "miniprogramtoh5").toString()
+      // let jt = AES.encrypt(wx.getStorageSync('jt'), "miniprogramtoh5").toString()
+      // let isRegister = wx.getStorageSync('isRegister')
+      // let companyName = wx.getStorageSync('companyName')
+      // let fansPhone = wx.getStorageSync('fansPhone')
+      // let fansId = wx.getStorageSync('fansId')
+      // let url
+      // api.getbannerList().then(res => {
+      //   if (res.code === '0') {
+      //     if (getEnv() === 'develop') {
+      //       // url = `http://10.64.155.187:8087/exhibition/indexdev.html#/home?jt=${encodeURIComponent(jt)}&isRegister=${isRegister}&userName=${userName}&companyName=${companyName}&fansPhone=${fansPhone}`
+      //       url = `https://dmp-test.hikvision.com/h5wechat/exhibition/exhibition.html#/home?jt=${encodeURIComponent(jt)}&isRegister=${isRegister}&userName=${userName}&companyName=${companyName}&fansPhone=${fansPhone}&fansId=${fansId}`
+      //     } else {
+      //       url = `https://dmp.hikvision.com/h5wechat/exhibition/exhibition.html#/home?jt=${encodeURIComponent(jt)}&isRegister=${isRegister}&userName=${userName}&companyName=${companyName}&fansPhone=${fansPhone}&fansId=${fansId}`
+      //     }
+      //     wx.setStorageSync('businesswebviewurl', url)
+      //     wx.navigateTo({
+      //       url: '/pages/webView/webView',
+      //     })
+      //   }
+      // })
+    } else if (name === '项目自助') {
+      addTrack('101001002')
+      getJt().then(res => {
+        this.checkLoginStatus(e)
+      })
+    } else if (name === '安防工具') {
+      addTrack('101001003')
+      wx.navigateTo({
+        url: e.currentTarget.dataset.item.url
+      })
+    } else if (name === '订单查询') {
+      addTrack('101001004')
+      getJt().then(res => {
+        this.checkLoginStatus(e)
+      })
+    } else if (name === '维修申请') {
+      addTrack('101001017')
+      let scene = app.globalData.scene
+      let route = 'pages/home/home'
+      let jt = AES.encrypt(wx.getStorageSync('jt'), "miniprogramtoh5").toString()
+      const firstLogin = wx.getStorageSync('firstLoginRepair')
+      console.log(scene, encodeURIComponent(jt), route)
+      if (firstLogin === 'false') {
+        wx.setStorageSync('businesswebviewurl', getEnv() === 'develop' ? `https://dmp-test.hikvision.com/h5wechat/repair/repair.html#/applyAdd?scene=${scene}&route=${route}&jt=${encodeURIComponent(jt)}` : `https://dmp.hikvision.com/h5wechat/repair/repair.html#/applyAdd?scene=${scene}&route=${route}&jt=${encodeURIComponent(jt)}`)
+      } else {
+        wx.setStorageSync('businesswebviewurl', getEnv() === 'develop' ? `https://dmp-test.hikvision.com/h5wechat/repair/repair.html#/?scene=${scene}&route=${route}&jt=${encodeURIComponent(jt)}` : `https://dmp.hikvision.com/h5wechat/repair/repair.html#/?scene=${scene}&route=${route}&jt=${encodeURIComponent(jt)}`)
+      }
+      wx.navigateTo({
+        url: e.currentTarget.dataset.item.url
+      })
+    } else if (name === '密码恢复') {
+      addTrack('101001019')
+      // 技服新版地址（新增小程序环境直接跳转主页）：测试地址：https://servicewechat.hikvision.com/wechat/passwordApp2/ 正式环境;https://servicewechat.hikvision.com/wechat/passwordApp/ 
+      wx.setStorageSync('businesswebviewurl', 'https://open.weixin.qq.com/connect/oauth2/authorize?appid=wx76bffe7ee2003f25&redirect_uri=https%3a%2f%2fservicewechat.hikvision.com%2fwechat%2fpasswordApp%2f&response_type=code&scope=snsapi_base&state=1&connect_redirect=1#wechat_redirect')
+      wx.navigateTo({
+        url: '/pages/webView/webView',
+      })
+    } else if (name === '在线知识库') {
+      let isRegister = wx.getStorageSync('isRegister')
+      addTrack('101001020')
+      wx.setStorageSync('businesswebviewurl', 'https://knshare-hk.faqrobot.cn/phone/index.html')
+      if (isRegister) {
+        wx.navigateTo({
+          url: '/pages/webView/webView',
+        })
+      } else {
+        checkUserAuth2RegisterOr2Auth()
+      }
+    } else if (name === '精彩活动') {
+      wx.navigateTo({
+        url: '/packageActivity/pages/wonderfulActivity/wonderfulActivityList/wonderfulActivityList'
+      })
+    } else if (name === '智涌钱塘') {
+      getJt().then(res => {
+        wx.navigateTo({
+          url: e.currentTarget.dataset.item.url
+        })
+      })
+    }
+  },
+  checkLoginStatus(e, url = '') {
+    api.isRegister().then(res => {
+      if (res.code === '0') {
+        if (res.data && (res.data.status === 0 || res.data.status === 2)) {
+          let toUrl = url ? url : e.currentTarget.dataset.item.url
+          console.log('home checkLoginStatus toUrl:', toUrl)
+          wx.setStorageSync('authAfterToUrl', toUrl)
+          checkUserAuth2RegisterOr2Auth(toUrl)
+          // wx.navigateTo({
+          //   url: url ? url : e.currentTarget.dataset.item.url
+          // })
+        } else {
+          checkUserAuth2RegisterOr2Auth()
+        }
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.log('checkLoginStatus error:', error)
+    })
+  },
+  tabClick: function (e) {
+    let trackId = e.currentTarget.dataset.tabindex === '2' ? '101006003' : '101006001'
+    addTrack(trackId)
+    this.setData({
+      activeTab: e.currentTarget.dataset.tabindex
+    })
+    switch (e.currentTarget.dataset.tabindex) {
+      case '1':
+        this.getPlanList('1', true, false);
+        break
+      case '2':
+        this.getPlanList('2', false, true);
+        break
+    }
+  },
+  // 切换tab
+  getPlanList(value, showOne, ShowTwo) {
+    this.selectComponent("#hikminiLoading").show()
+    this.setData({
+      showhotSolution: showOne,
+      showhotCase: ShowTwo,
+    })
+    this.selectComponent("#hikminiLoading").hide()
+  },
+  onShareAppMessage: function (res) {
+    let curUnionid = wx.getStorageSync('unionId')
+    return {
+      title: '首页',
+      // imageUrl: '',
+      path: `/pages/home/home?sharerUnionid=${curUnionid}`
+    }
+  },
+  // 检查用户登录状态，刷新本地用户信息
+  updateLoginStatus() {
+    api.isRegister().then(res => {
+      if (res.code === '0') {
+        if (res.data) {
+          wx.setStorageSync('appointmentIsOperate', res.data.appointmentIsOperate)
+          wx.setStorageSync('fansId', res.data.id)
+          wx.setStorageSync('registerStatus', res.data.status)
+          wx.setStorageSync('companyName', res.data.companyName)
+          wx.setStorageSync('fansPhone', res.data.fansPhone)
+          wx.setStorageSync('fansName', res.data.fansName)
+          wx.setStorageSync('fansId', res.data.id)
+          wx.setStorageSync('saleFlag', res.data.saleFlag)
+          let isRegister = res.data.status === 0 || res.data.status === 2 ? 1 : 0 // 注册状态：0:有效、1:无效、2:待核查、3:未注册
+          wx.setStorageSync('isRegister', isRegister)
+        }
+      } else {
+        showErrorToast(res.message)
+      }
+    }).catch(error => {
+      console.log(error)
+    })
+  },
+  onTabItemTap() {
+    app.globalData.curTabName = 'home'
+    app.globalData.allTabState[app.globalData.curTabName].num += 1
+  }
+})
