@@ -1,0 +1,265 @@
+<!--
+ * @Description: 权限树
+ * @Author: 张亚明
+ * @Date: 2020-09-08 10:36:01
+ * @LastEditTime: 2021-08-26 15:07:08
+ * @LastEditors: zhangzijian
+-->
+
+<template>
+  <div class="tree-box">
+    <div class="selectBox">
+      <el-row>
+        <!-- <el-col :span="5">
+          <el-button type="primary" size="mini" @click="importDept"  v-if="checkPermisssion(authButtonData, '/api/dept/query')">组织导入</el-button>
+        </el-col> -->
+        <el-col :span="19">
+          <el-input
+            v-model="filterText"
+            clearable
+            placeholder="请输入关键字进行过滤"
+            style="width: 100%"
+          ></el-input>
+          <!-- <el-input placeholder="请输入关键字进行过滤" v-model="filterText" clearable @keydown.enter.native="search" style="text-align:right;">
+            <el-button slot="append" icon="el-icon-search">搜索</el-button>
+          </el-input> -->
+        </el-col>
+      </el-row>
+    </div>
+    <div class="treeBox" :style="{ height: storeInnerHeight - 220 + 'px' }">
+      <el-tree
+      :highlight-current="true"
+        :lazy="true"
+        :load="loadTreeNodes"
+        :props="defaultProps"
+        :filter-node-method="filterNode"
+        @node-click="clickTree"
+        :node-key="nodeKey"
+        :default-expanded-keys="expendArr"
+        :current-node-key="currentNodeKey"
+        ref="tree"
+        v-loading="loading"
+        :expand-on-click-node="true"
+      >
+      </el-tree>
+    </div>
+    <addDepartment
+      :visible="deptVisible"
+      :selectedIds="selectedIds"
+      @success="refresh"
+      @close="closeDeptDialog"
+    ></addDepartment>
+  </div>
+</template>
+
+<script>
+import { deptQueryAllAPI } from '@/service/api.js'
+import authButtonMixin from '@/utils/pageButtonAuthMixin.js'
+import addDepartment from '@/components/systemUser/addDepartment.vue'
+import eventBus from '@/utils/eventBus.js'
+import { mapState } from 'vuex'
+export default {
+  name: '',
+  mixins: [authButtonMixin],
+  components: {
+    addDepartment
+  },
+  // 数据
+  data () {
+    return {
+      nodeKey: 'id',
+      treeMenu: [{
+        deptCode: '000001',
+        deptManager: null,
+        deptName: '海康威视',
+        id: 3528,
+        idPath: '000032',
+        isOpen: null,
+        namePath: '海康威视',
+        parentId: 1,
+        sysCode: ''
+      }],
+      firstNode: null,
+      treeListLevel1: null,
+      filterText: '',
+      expendArr: [],
+      defaultProps: {
+        children: 'children',
+        label: 'deptName',
+        id: 'id',
+        isLeaf: 'leaf'
+      },
+      activeLable: '',
+      loading: false,
+      curKey: '',
+      deptVisible: false,
+      selectedIds: [],
+      currentNodeKey: '',
+      node: null
+    }
+  },
+  // vue实例被创建时
+  created () {
+
+  },
+  // vue实例被挂载至dom上时
+  mounted () {
+    let nodedata = this.node.childNodes[0]
+    nodedata.expanded = true
+    // 加载第二次tree组件
+    nodedata.loadData()
+    // 组织成员添加成功,重新读取树的数据
+    eventBus.$on('handleAddSysuser', () => {
+      this.getTreeList()
+    })
+  },
+  // keep-alive之后页面会缓存，不会执行created(),和mounted(),但是会执行activated()
+  activated () { },
+  // 退出的生命周期钩子
+  deactivated () { },
+  // 销毁
+  destroyed () { },
+  // 属性值计算
+  computed: {
+    ...mapState({
+      storeInnerHeight: state => state.menu.innerHeight
+    })
+  },
+  // 数据侦听
+  watch: {
+    filterText (val) {
+      this.$refs.tree.filter(val)
+    }
+  },
+  // 实例方法
+  methods: {
+    loadTreeNodes (node, resolve) {
+      console.log(node, 'node')
+      if (node.level === 0) {
+        this.node = node
+        resolve(this.treeMenu)
+      } else if (node.level >= 1) {
+        deptQueryAllAPI({deptCode: node.data.deptCode}).then(res => {
+          if (res.code === '0') {
+            // this.currentNodeKey = this.treeMenu[0].deptCode
+            console.log(this.currentNodeKey, 'ddd')
+            // this.clickTree(this.treeMenu[0].children[0])
+
+            if (res.data.children === null) {
+              return resolve([])
+            }
+            resolve(res.data.children)
+            this.$nextTick(() => {
+              console.log(this.$refs['tree'], 'tree')
+              console.log(this.$refs['tree'].setCurrentKey(this.currentNodeKey), '444')
+            })
+            // this.$nextTick(() => {
+            //   if (this.currentNodeKey.toString()) {
+            //     this.$refs['tree'].setCurrentKey(this.currentNodeKey)
+            //   } else {
+            //     this.$refs['tree'].setCurrentKey(null)
+            //   }
+            // })
+          } else {
+            this.$message({
+              type: 'warning',
+              message: res.message
+            })
+          }
+        })
+      } else {
+        return resolve([])
+      }
+    },
+    // 根据关键字过滤树内容
+    search () {
+      this.$refs.tree.filter(this.filterText)
+    },
+    // 筛选
+    filterNode (value, data) {
+      if (!value) return true
+      return data.deptName.indexOf(value) !== -1
+    },
+    // 节点被点击时触发,向父元素传递组织ID
+    clickTree (obj, node, self) {
+      this.activeLable = obj.$treeNodeId
+      this.$emit('getTreeUserList', obj)
+    },
+    // 组织机构导入
+    importDept () {
+      this.deptVisible = true
+    },
+    // 关闭组织机构导入对话框
+    closeDeptDialog () {
+      this.deptVisible = false
+    },
+    // 导入成功后重新刷组织数据
+    refresh () {
+      this.deptVisible = false
+      this.getTreeList()
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.tree-box {
+  height: 100%;
+  .selectBox {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    .input {
+      width: 100%;
+    }
+  }
+  .treeBox {
+    height: calc(~"100% - 50px");
+    overflow-y: scroll;
+    /deep/ .el-tree-node__content {
+      height: 30px;
+    }
+    /deep/ .el-tree-node__content:hover {
+      color: #ee3743;
+      background-color: #feebec;
+    }
+    /deep/.el-tree-node:focus > .el-tree-node__content {
+      background-color: #feebec;
+    }
+    /deep/.el-button {
+      border-radius: 4px;
+    }
+    /deep/ .el-scrollbar {
+      height: calc(~"100% - 49px");
+    }
+    /deep/.el-dialog__header {
+      padding: 12px;
+    }
+    /deep/ .is-current {
+      background-color: #feebec;
+    }
+    /deep/ .el-tree-node__children .is-current {
+      background-color: #feebec;
+    }
+    /deep/ .el-tree-node__children .is-current .el-tree-node__children,
+    /deep/ .el-tree-node > .el-tree-node__children {
+      background-color: #fff;
+    }
+  }
+  /*滚动条样式*/
+  .treeBox::-webkit-scrollbar {
+    /*滚动条整体样式*/
+    width: 4px; /*高宽分别对应横竖滚动条的尺寸*/
+    height: 8px;
+  }
+  .treeBox:-webkit-scrollbar-thumb {
+    /*滚动条里面小方块*/
+    border-radius: 5px;
+    background: rgba(0, 0, 0, 0.2);
+  }
+  .treeBox::-webkit-scrollbar-track {
+    /*滚动条里面轨道*/
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.1);
+  }
+}
+</style>
