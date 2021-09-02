@@ -85,3 +85,14 @@ export default {
     :handleCancen="handleClose"
   >
   </>
+
+
+
+
+
+
+
+
+ handleShowDialog (title, item = {imgUrl: ''}) {
+      this.dialogTitle = title
+      this.dialogVisible = true
