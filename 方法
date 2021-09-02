@@ -1,0 +1,79 @@
+ async asySort ({id, sortTag, index}) {
+      try {
+        let nearId
+        if (sortTag === 1) {
+          if (this.list[index - 1]) {
+            nearId = this.list[index - 1].id
+          } else {
+            return this.$message.info('已在首位')
+          }
+        } else {
+          if (this.list[index + 1]) {
+            nearId = this.list[index + 1].id
+          } else {
+            return this.$message.info('已在末位')
+          }
+        }
+        let res = await sortSoftwareCategory({id, sortTag, productIds: [id, nearId]})
+        if (res.code === '0') {
+          this.$message.success('排序成功!')
+          if (this.active !== null) {
+            sortTag === 1 ? this.active-- : this.active++
+          }
+          this.asyQuery()
+        } else {
+          this.$message.error(res.message)
+        }
+      } catch (error) {
+        throw error
+      }
+    
+    
+    
+    
+      sortHotWordsItem (item, num, sortType, type, index) {
+      let previousId
+      let message
+      if (type === 'up') {
+        if (index === 0) {
+          this.$message.warning('该项已排在第一位！')
+          return
+        }
+        message = '上移成功!'
+        previousId = this.tableData[index - 1].id
+      } else if (type === 'down') {
+        if (sortType === 'moveposition' && index === (this.tableData.length - 1)) {
+          this.$message.warning('该项已排在最后一位！')
+          return
+        }
+        message = '下移成功!'
+        previousId = this.tableData[index + 1].id
+      } else if (type === 'top') {
+        if (index === 0) {
+          this.$message.warning('该项已置顶在第一位！')
+          return
+        }
+        message = '置顶成功'
+      }
+      // if (num) {
+      //   let target = this.findTarget(item, num, index)
+      //   if (target === '已排在第一位' || target === '已排在最后一位' || target === '已置顶在第一位') {
+      //     this.$message({
+      //       type: 'warning',
+      //       message: target
+      //     })
+      //     return
+      //   }
+      // }
+      let data = { id: item.id, type: num, nearId: previousId }
+      hotWordsMove(data).then(res => {
+        if (res.code === '0') {
+          this.$message.success(message)
+          this.getTableData()
+        } else {
+          this.$message({ type: 'error', message: res.message })
+        }
+      }).catch((err) => {
+        this.$message({ type: 'error', message: err.message })
+      })
+    },
