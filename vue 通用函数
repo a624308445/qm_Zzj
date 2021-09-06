@@ -1,0 +1,38 @@
+// 防抖函数的使用场景： 频繁触发、输入框搜索
+function debounce (fn, wait) {
+  let timerId = null
+  let flag = true
+  return function () {
+    clearTimeout(timerId)
+    if (flag) {
+      fn.apply(this, arguments)
+      flag = false
+    }
+    timerId = setTimeout(() => {
+      flag = true
+    }, wait)
+  }
+}
+}
+调用保存修改方法
+    this.saveSlideShow = debounce(this.saveSlideShow, 1000)
+    this.editSlideShow = debounce(this.editSlideShow, 1000)
+export function throttle (fn, delay, atleast) {
+  let timer = null
+  let previous = null
+  return function () {
+    let now = +new Date()
+    if (!previous) previous = now
+    if (atleast && now - previous > atleast) {
+      fn()
+      previous = now
+      clearTimeout(timer)
+    } else {
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        fn()
+        previous = null
+      }, delay)
+    }
+  }
+}
