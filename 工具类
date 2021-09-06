@@ -72,3 +72,28 @@ let discoverFormateTime = function (timestamp) {
   }
   return result
 }
+
+
+
+挂载道app 全局对象里
+  onLaunch: function (options) {
+      this.globalData.showFlag=true //首页广告弹窗
+  }
+  弹出广告的接口
+   if (app.globalData.showFlag) {
+      api.isPopupInterestTag().then(res => {
+        if (res.code === '0') {
+          this.setData({
+            showDialog: res.data ? true : false
+          })
+          app.globalData.showFlag = false
+          if (this.data.showDialog === false) {
+            this.isAlertAdvertisement()
+          }
+        } else {
+          showErrorToast(res.message)
+        }
+      }).catch(error => {
+        console.log('判断是否弹兴趣标签接口异常', error)
+      })
+    }
