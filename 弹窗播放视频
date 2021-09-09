@@ -1,0 +1,108 @@
+videoObj: {
+        videoName: '', // 视频名称
+        videoSrc: '', // 视频路径
+        videoCreateName: '', // 视频创建人
+        videoUptime: '', // 视频上传时间
+        videoduration: '', // 视频时长
+        videoViews: '', // 视频浏览量
+        videoVolume: '', // 视频大小
+        thumbUrl: '', // 视频封面
+        videoShow: false // 展示弹框
+      },
+      handleClose (value) { // 视频关闭
+      this.videoObj.videoShow = value
+    },
+    playVideo (value, e) { // 视频预览
+      if (value.videoUrl) {
+        this.videoObj = {
+          videoSrc: value.videoUrl,
+          videoName: value.title,
+          videoCreateName: value.createBy, // 视频创建人
+          videoUptime: _formatterTime(value.createTime, '-', 'long'),
+          videoduration: value.videoTime, // 视频时长
+          videoViews: value.views, // 视频浏览量
+          videoVolume: handleFileSize(value.size), // 视频大小
+          thumbUrl: value.thumbUrl, // 视频封面
+          videoShow: true
+        }
+      }
+      e.stopPropagation()
+    },
+       <show-video :videoObj="videoObj" @handleClose="handleClose"></show-video>
+       
+       <!--
+ * @Description: 
+ * @Author: 李敏
+ * @Date: 2020-07-06 17:34:12
+ * @LastEditTime: 2021-08-26 18:39:30
+ * @LastEditors: Wang Menglu
+--> 
+<template>
+  <div>
+   <el-dialog :title="videoObj.videoName" @close="CloseFunction()" :visible.sync="newVideoShow">
+    <div class="dialogvideo">
+      <img :src="videoObj.videoSrc" alt="" class="img" v-if="videoObj.imgshow" />
+      <video v-else :src="videoObj.videoSrc" :poster="videoObj.thumbUrl" controls="controls" ref="videowrap" id="videowrap" :height="videoHeight"></video>
+      <p v-show="!videoObj.imgshow">
+        <span>创建人: {{videoObj.videoCreateName}} , 上传时间: {{videoObj.videoUptime}}</span> 
+        <span class="volume" v-if="videoObj.videoVolume">视频大小: {{videoObj.videoVolume}}</span>
+      </p>
+    </div>
+   </el-dialog>
+  </div>
+</template>
+<script>
+export default {
+  props: {
+    videoHeight: {
+      type: String,
+      default () {
+        return '600px'
+      }
+    },
+    videoObj: {
+      type: Object,
+      default () {
+        return {}
+      }
+    }
+  },
+  data () {
+    return {
+      newVideoShow: false
+    }
+  },
+  methods: {
+    CloseFunction () {
+      this.$emit('handleClose', false)
+    }
+  },
+  watch: {
+    'videoObj.videoShow': {
+      handler (newVal, oldVal) {
+        this.newVideoShow = newVal
+        if (!this.videoObj.imgshow) {
+          this.$nextTick(() => {
+            this.$refs.videowrap.currentTime = 0 // 初始化开始时间
+            this.$refs.videowrap.pause() // 视频暂停
+          })
+        }
+      }
+    }
+  }
+}
+</script>
+<style>
+#videowrap{
+  width:100%;
+  /*object-fit: cover;*/
+}
+.volume{
+  float:right;
+}
+.img{
+  width:100%;
+  height:600px;
+  object-fit:cover;
+}
+</style>
