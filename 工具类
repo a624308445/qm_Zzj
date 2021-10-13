@@ -97,3 +97,16 @@ let discoverFormateTime = function (timestamp) {
         console.log('判断是否弹兴趣标签接口异常', error)
       })
     }
+
+
+附件下载
+export const createDownloadA = function (url) {
+  let link = document.createElement('a')
+  link.style.display = 'none'
+  link.href = url
+  link.setAttribute('download', '')
+  link.setAttribute('target', '_blank')
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(document.body.querySelector('body>a'))
+}
