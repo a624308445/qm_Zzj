@@ -1,0 +1,329 @@
+<!--
+ * @Descripttion: 
+ * @version: 1.0
+ * @Author: zhangziijan
+ * @Date: 2021-10-29 10:55:43
+ * @LastEditors: zhangzijian
+ * @LastEditTime: 2021-11-01 10:41:37
+-->
+<template>
+  <div class="banner">
+    <card title="首页轮播图">
+      <div class="banner-box">
+        <div class="item" v-for="(item, index) in successList" :key="item.id">
+                            <div class="bottomCover">
+            <i class="el-icon-delete" @click="deleteItem(item)"></i>
+          </div>
+          <img :src="item.bannerUrl" alt="" />
+          <p>{{ item.skipType | getType }}</p>
+          <p class="title">{{ item.title }}</p>
+        </div>
+        <div class="item-add" @click="addItem" v-show="successList.length < 6">
+          <i class="el-icon-plus"></i>
+        </div>
+      </div>
+    </card>
+    <DialogX
+      title="首页轮播图"
+      width="1100px"
+      :dialogVisible="dialogVisible"
+      :handleClose="handleClose"
+      :handleSubmit="handleSubmit"
+      :handleCancen="handleClose"
+    >
+      <div class="img-content">
+        <div class="img-list-content">
+          <div class="img-list">
+            <div
+              class="item"
+              @click="choiceItem(item)"
+              v-for="(item, index) in bannerList"
+              :key="index"
+            >
+              <img :src="item.bannerUrl" alt="" />
+              <p>{{ item.skipType | getType }}</p>
+              <p class="title">{{ item.title }}</p>
+              <div class="check-img" v-show="item.isCheck">
+                <img src="~@/assets/dmp/icon/check.png" alt="" class="tick" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="addCase-check">
+          <div class="addCase-check-top">
+            <span>已选择</span>
+            <span @click="clear">清空</span>
+          </div>
+          <div class="addCase-check-list">
+            <div
+              class="item"
+              v-for="(item, index) in choiceItemList"
+              :key="index"
+            >
+              <img :src="item.bannerUrl" alt="" />
+              <p>{{ item.skipType | getType }}</p>
+              <p>{{ item.title }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DialogX>
+  </div>
+</template>
+
+<script>
+import {
+  queryBannerAPI
+} from '@/service/dmp/api'
+export default {
+  data () {
+    return {
+      clearFlag: false,
+      successList: [],
+      choiceItemList: [],
+      bannerList: [],
+      dialogVisible: false
+    }
+  },
+  created () {
+  },
+  watch: {
+    dialogVisible (val) {
+      val ? this.getBannerList() : ''
+    }
+  },
+  filters: {
+    getType (type) {
+      switch (String(type)) {
+        case '0': return `【不跳转】`
+        case '1': return `【硬件】`
+        case '2': return `【方案】`
+        case '3': return `【案例】`
+        case '4': return `【频道】`
+        case '5': return `【文章】`
+        case '6': return `【视频】`
+        case '7': return `【主体】`
+        case '8': return `【链接】`
+        case '9': return `【电子物料】`
+        case '10': return `【小程序页面】`
+        case '11': return `【软件产品】`
+        default: return '【不跳转】'
+      }
+    }
+  },
+  methods: {
+    deleteItem (v) {
+      this.$confirm('确认删除?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(res => {
+        this.successList.splice(v, 1)
+      }).catch(() => {
+        this.$message.info('取消删除')
+      })
+    },
+    clear () {
+      this.choiceItemList.forEach(item => {
+        item.isCheck = false
+      })
+      this.choiceItemList = []
+    },
+    choiceItem (item) {
+      item.isCheck = !item.isCheck
+      if (item.isCheck) {
+        this.choiceItemList.push(item)
+      } else {
+        this.choiceItemList.splice(this.choiceItemList.indexOf(item), 1)
+      }
+    },
+    getBannerList () {
+      queryBannerAPI().then(res => {
+        if (res.code === '0') {
+          res.data.forEach(item => {
+            this.$set(item, 'isCheck', false)
+            console.log(item, 'item')
+          })
+          this.bannerList = res.data
+        } else {
+          this.$message({ type: 'error', message: res.message })
+        }
+      })
+    },
+    handleSubmit () {
+      if (!this.choiceItemList.length) {
+        this.$message({ type: 'warning', message: '请选择轮播图' })
+        return
+      }
+      this.choiceItemList.forEach(item => {
+        this.successList.push(item)
+      })
+      console.log(this.successList, 'success')
+      this.dialogVisible = false
+    },
+    addItem () {
+      this.choiceItemList = []
+      this.dialogVisible = true
+    },
+    handleShowDialog () {
+      this.dialogVisible = true
+    },
+    handleClose () {
+      this.choiceItemList = []
+      this.dialogVisible = false
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.banner-box.item:hover.bottomCover {
+  display: block !important;
+  cursor: default;
+}
+
+.item {
+  box-sizing: border-box;
+  cursor: pointer;
+  position: relative;
+  margin: 8px 18px;
+
+  // :hover.bottomCover{
+  //   opacity: 1;
+  // }
+  .title {
+    color: #999;
+    margin-left: 5px;
+  }
+  .check-img {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 1000;
+    img {
+      width: 22px;
+      height: auto;
+    }
+  }
+  p {
+    color: #333;
+    height: 23px;
+    line-height: 23px;
+  }
+  p:last-child {
+    color: #999;
+    margin-left: 5px;
+  }
+  img {
+    width: 243px;
+    height: 126px;
+  }
+  // img:hover {
+  //   box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.35);
+  // }
+}
+.img-content {
+  border: 1px solid #e5e5e5;
+  border-radius: 5px;
+  display: flex;
+  height: 480px;
+  .img-list-content {
+    border-right: 1px solid #e5e5e5;
+    width: 720px;
+    .img-list {
+      flex-wrap: wrap;
+      padding-bottom: 5px;
+      display: flex;
+      align-content: flex-start;
+      height: 478px;
+      overflow-y: scroll;
+    }
+  }
+  .addCase-check {
+    width: 37%;
+    flex-shrink: 0;
+    .addCase-check-top {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #e5e5e5;
+      padding: 10px;
+      span:last-child {
+        color: #108ee9;
+        cursor: pointer;
+      }
+    }
+    .addCase-check-list {
+      padding-left: 12px;
+      height: 430px;
+      overflow-y: scroll;
+      padding-bottom: 5px;
+      .item {
+        width: 335px;
+        margin-top: 15px;
+        margin-left: 10px;
+        box-sizing: border-box;
+        cursor: pointer;
+        img {
+          width: 100%;
+        }
+        p {
+          color: #333;
+          height: 23px;
+          line-height: 23px;
+        }
+        p:last-child {
+          color: #999;
+          margin-left: 5px;
+        }
+      }
+    }
+  }
+}
+.banner {
+  padding: 10px;
+  .card {
+    background: #fff;
+    /deep/.card-title {
+      background: #fff;
+    }
+  }
+  .banner-box {
+    display: flex;
+    flex-wrap: wrap;
+    .item{
+      :hover.bottomCover{
+        display: block;
+      }
+      .bottomCover {
+  position: absolute;
+  bottom: 2px;
+  text-align: center;
+  left: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  height: 45px;
+  width: 100%;
+  display: none;
+  i {
+    text-align: center;
+    font-size: 18px;
+    color: white;
+    cursor: pointer;
+    vertical-align: -17px;
+    font-size: 23px;
+  }
+}
+    }
+    .item-add {
+      width: 175px;
+      height: 175px;
+      border: 1px dashed #ccc;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 32px;
+      color: #ccc;
+      cursor: pointer;
+    }
+  }
+}
+</style>
