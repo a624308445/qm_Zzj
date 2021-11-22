@@ -1,0 +1,223 @@
+<!--
+ * @Descripttion: 
+ * @version: 1.0
+ * @Author: zhangziijan
+ * @Date: 2021-10-29 10:55:43
+ * @LastEditors: zhangzijian
+ * @LastEditTime: 2021-11-22 10:37:50
+-->
+<template>
+  <div class="banner">
+    <div class="banner-box">
+      <div class="item" v-for="(item, index) in successList" :key="index">
+        <div class="bottomCover" v-dmpauth="'cl_content_uncontact_other'">
+          <i class="el-icon-delete" @click="deleteItem(item)"></i>
+        </div>
+        <img :src="item.bannerUrl" alt="" />
+        <p>{{ item.skipType | getType }}</p>
+        <p class="title">{{ item.title }}</p>
+      </div>
+      <div class="item-add" v-dmpauth="'cl_content_contact_other'" @click="addItem" v-show="successList.length < 6">
+        <i class="el-icon-plus"></i>
+      </div>
+    </div>
+    <DialogX
+      title="首页轮播图"
+      width="1100px"
+      :dialogVisible="dialogVisible"
+      :handleClose="handleClose"
+      :handleSubmit="handleSubmit"
+      :handleCancen="handleClose"
+    >
+      <div class="img-content">
+        <div class="img-list-content">
+          <div class="img-list">
+            <div
+              class="item"
+              @click="choiceItem(item)"
+              v-for="(item, index) in bannerList"
+              :key="index"
+            >
+              <img :src="item.bannerUrl" alt="" />
+              <p>{{ item.skipType | getType }}</p>
+              <p class="title">{{ item.title }}</p>
+              <div class="check-img" v-show="item.isCheck">
+                <img src="~@/assets/dmp/icon/check.png" alt="" class="tick" />
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="addCase-check">
+          <div class="addCase-check-top">
+            <span>已选择</span>
+            <span @click="clear">清空</span>
+          </div>
+          <div class="addCase-check-list">
+            <div
+              class="item"
+              v-for="(item, index) in choiceItemList"
+              :key="index"
+            >
+              <img :src="item.bannerUrl" alt="" />
+              <p>{{ item.skipType | getType }}</p>
+              <p>{{ item.title }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </DialogX>
+  </div>
+</template>
+
+<script>
+import {
+  queryBannerAPI,
+  saveOtherContent,
+  queryOtherContent,
+  deleteOtherContentAPI
+} from '@/service/dmp/api'
+export default {
+  data () {
+    return {
+      clearFlag: false,
+      successList: [],
+      choiceItemList: [],
+      bannerList: [],
+      dialogVisible: false
+    }
+  },
+  created () {
+    this.getQuerySwiper()
+  },
+  computed: {
+    id () {
+      return this.$route.query.id
+    }
+  },
+  watch: {
+    dialogVisible (val) {
+      val ? this.getBannerList() : ''
+    }
+  },
+  filters: {
+    getType (type) {
+      switch (String(type)) {
+        case '0': return `【不跳转】`
+        case '1': return `【硬件】`
+        case '2': return `【方案】`
+        case '3': return `【案例】`
+        case '4': return `【频道】`
+        case '5': return `【文章】`
+        case '6': return `【视频】`
+        case '7': return `【主体】`
+        case '8': return `【链接】`
+        case '9': return `【电子物料】`
+        case '10': return `【小程序页面】`
+        case '11': return `【软件产品】`
+        default: return '【不跳转】'
+      }
+    }
+  },
+  methods: {
+    deleteItem (v) {
+      let options = {
+        marketEventId: this.id,
+        contentId: v.id,
+        contentType: 0
+      }
+      this.$confirm('确认删除?', '提示', {
+        confirmButtonText: '确 定',
+        cancelButtonText: '取 消',
+        type: 'question'
+      }).then(res => {
+        deleteOtherContentAPI(options).then(res => {
+          if (res.code === '0') {
+            this.$message.success('删除成功')
+            this.getQuerySwiper()
+          } else {
+            this.$message({ type: 'error', message: res.message })
+          }
+        })
+      }).catch(() => {
+        this.$message.info('取消删除')
+      })
+    },
+    clear () {
+      this.choiceItemList.forEach(item => {
+        item.isCheck = false
+      })
+      this.choiceItemList = []
+    },
+    choiceItem (item) {
+      item.isCheck = !item.isCheck
+      if (item.isCheck) {
+        this.choiceItemList.push(item)
+      } else {
+        this.choiceItemList = this.choiceItemList.filter(element => { return item.id !== element.id })
+      }
+    },
+    getBannerList () {
+      queryBannerAPI().then(res => {
+        if (res.code === '0') {
+          res.data.forEach(item => {
+            let temp = this.choiceItemList.find(element => { return element.id === item.id })
+            item.isCheck = !!temp
+          })
+          this.bannerList = res.data
+        } else {
+          this.$message({ type: 'error', message: res.message })
+        }
+      })
+    },
+    handleSubmit () {
+      if (!this.choiceItemList.length) {
+        this.$message({ type: 'warning', message: '请选择轮播图' })
+        return
+      }
+      if (!this.choiceItemList.length > 6) {
+        this.$message({ type: 'warning', message: '最多选择6条' })
+        return
+      }
+      console.log(this.choiceItemList[0].id)
+      let temp = []
+      this.choiceItemList.forEach((item, index) => {
+        temp.push(item.id)
+      })
+      let options = {
+        marketEventId: this.id,
+        contentType: 0,
+        contentIds: temp
+      }
+      saveOtherContent(options).then(res => {
+        if (res.code === '0') {
+          this.$message.success('关联成功')
+          this.getQuerySwiper()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+      this.dialogVisible = false
+    },
+    getQuerySwiper () {
+      queryOtherContent({ marketEventId: this.id }).then(res => {
+        if (res.code === '0') {
+          this.successList = res.data.bannerDTOS
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    },
+    addItem () {
+      this.choiceItemList = []
+      this.dialogVisible = true
+    },
+    handleShowDialog () {
+      this.dialogVisible = true
+    },
+    handleClose () {
+      this.choiceItemList = []
+      this.dialogVisible = false
+    }
+  }
+}
+</script>
