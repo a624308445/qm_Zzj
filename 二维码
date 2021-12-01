@@ -1,0 +1,31 @@
+    onPreview () {
+      this.QRCodeDialogVisible = true
+      this.$message.success('请通过微信扫描二维码预览')
+      this.$nextTick(function () {
+        document.getElementById('qrcode').innerHTML = ''
+        let qrcode = new QRCode('qrcode', {
+          width: 150,
+          height: 150,
+          text: `https://dmp.hikvision.com/h5wechat/tools/tools.html#${isTest ? '/test' : ''}/wonderfulActivity/lookBackCl/lookBackCl?marketEventId=${this.id}` // WTODO | Name:zhangzijian | Remark: 正式环境去掉/test| Range line305  ~ line 305  // 二维码地址
+        })
+        console.log(qrcode)
+      })
+    },
+        <el-dialog
+      title="活动主页预览"
+      :visible.sync="QRCodeDialogVisible"
+      width="30%"
+    >
+      <div id="qrcode" class="qrcode"></div>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="QRCodeDialogVisible = false">取 消</el-button>
+      </span>
+    </el-dialog>
+    import QRCode from 'qrcodejs2'
+    
+    .qrcode {
+  display: flex;
+  justify-content: center;
+  padding-bottom: 16px;
+  padding-right: 20px;
+}
