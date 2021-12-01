@@ -1,0 +1,120 @@
+      <div class="bar-left">
+        <el-button type="primary" size="small" @click="addMember"
+          >添加成员</el-button
+        >
+        <el-button type="default" @click="batchDelete">删除成员</el-button>
+        <el-button
+          type="primary"
+          v-if="checkPermisssion(authButtonData, '/api/user/import')"
+          @click="batchImport()"
+          >批量导入</el-button
+        >
+        <el-upload
+          v-show="false"
+          class="upload-demo"
+          multiple
+          :action="uploadUrl"
+          :data="{ roleId: this.$route.query.roleId }"
+          :on-success="uploadSuccess"
+          :before-upload="beforeUpload"
+          :file-list="fileList"
+          :headers="myHeaders"
+          :on-error="uploadError"
+        >
+          <el-button size="small" type="primary" ref="uploadButton"
+            >点击上传</el-button
+          >
+        </el-upload>
+        <span v-if="templateUrl" class="template" @click="downloadFile()"
+          >导入模板下载</span
+        >
+      </div>
+      
+      
+      
+          downloadFile () {
+      let options = {
+        fileKey: this.templateUrl,
+        fileName: '角色成员导入模板.xlsx'
+      }
+      downloadFile(options).then(res => {
+        const r = new FileReader()
+        let that = this
+        console.log('downloadFile -> res', res)
+        r.onload = function () {
+          try {
+            const resData = JSON.parse(this.result)
+            console.log('downloadFile -> resData', resData)
+            that.$message.error(resData.message)
+          } catch (err) {
+            // 下载正常处理
+            that.download(res, '权限系统用户导入模板.xlsx')
+          }
+        }
+        r.readAsText(res) // FileReader的API
+      })
+    },
+    download (res, fileName) {
+      // 兼容ie11
+      if (window.navigator.msSaveOrOpenBlob) {
+        try {
+          const blobObject = new Blob([res])
+          window.navigator.msSaveOrOpenBlob(blobObject, fileName)
+        } catch (e) {
+          console.log(e)
+        }
+        return
+      }
+      // a标签实现下载
+      let blob = new Blob([res])
+      console.log('download -> blob', blob)
+      let link = document.createElement('a')
+      let href = window.URL.createObjectURL(blob) // 创建下载的链接
+      link.style.display = 'none'
+      link.href = href
+      link.download = fileName // 下载后文件名
+      document.body.appendChild(link)
+      link.click() // 点击下载
+      document.body.removeChild(link) // 下载完成移除元素
+      window.URL.revokeObjectURL(href) // 释放掉blob对象
+    },
+    
+    
+    
+    
+        uploadSuccess (res) {
+      this.loading = false
+      if (res.code === '0') {
+        this.params.pageNumber = 1
+        this.getUserList()
+        this.$message.success('导入成功')
+      } else if (res.code === '-1') {
+        this.$message({ type: 'error', message: res.message })
+      } else if (res.code === '1019') {
+        this.$message({ type: 'error', message: res.message })
+      } else {
+        res.data.forEach(item => {
+          Object.assign(item, { errorLine: `第${item.line}行` })
+        })
+        this.dialogImportErrorVisible = true
+        this.importErrorData = res.data.slice(0, 10)
+      }
+    },
+    batchImport () {
+      this.$refs.uploadButton.$el.click()
+    },
+    
+        <el-dialog
+      title="导入错误详情"
+      center
+      :visible.sync="dialogImportErrorVisible"
+    >
+      <el-table :data="importErrorData">
+        <el-table-column
+          property="errorLine"
+          label="错误位置"
+          width="120"
+        ></el-table-column>
+        <el-table-column property="errorMsg" label="错误信息"></el-table-column>
+      </el-table>
+    </el-dialog>
