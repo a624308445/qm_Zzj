@@ -1,0 +1,100 @@
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 100px; text-align: right"
+              >
+                推广业务：
+              </div>
+              <div class="message-item-value">
+                <div class="outsideWrap">
+                  <el-tooltip
+                    v-if="
+                      cloneRuleForm.businessName &&
+                      cloneRuleForm.businessName.length > 30
+                    "
+                    effect="light"
+                    placement="top"
+                  >
+                    <div slot="content" class="content-business">
+                      {{ cloneRuleForm.businessName }}
+                    </div>
+                    <input
+                      id="checkbox1"
+                      type="checkbox"
+                      class="checkboxClass"
+                    />
+                    <div class="insideWrap" id="insideWrap">
+                      <label for="checkbox1" class="btnClass"></label>
+                      <span>{{ cloneRuleForm.businessName }}</span>
+                    </div>
+                  </el-tooltip>
+                  <p v-else>{{ cloneRuleForm.businessName }}</p>
+                </div>
+              </div>
+            </div>
+            
+            
+            .outsideWrap {
+  display: flex;
+  box-shadow: 0 2px 10px #999, 0 -2px 10px #fff;
+  overflow: hidden;
+  /* 隐藏的 checkbox 样式 */
+  .checkboxClass {
+    display: none;
+    &:checked {
+      & + .insideWrap {
+        max-height: none;
+        &::after {
+          visibility: hidden;
+        }
+        .btnClass {
+          &::before {
+            visibility: hidden;
+          }
+        }
+      }
+    }
+  }
+  /* 文本框样式 */
+  .insideWrap {
+    position: relative;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    max-height: 4.5em; // 与 line-height 一起决定了最多展示几行
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &::before {
+      content: "";
+      height: calc(100% - 21px); // 减去按钮高度
+      float: right;
+    }
+    &::after {
+      position: absolute;
+      content: "";
+      width: 99vw;
+      height: 99vw;
+      box-shadow: -99vw -99vw 0 0 #fff inset;
+    }
+    /* 展开收起按钮样式 */
+    .btnClass {
+      position: relative;
+      float: right;
+      clear: both;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-left: 1em; // 留出省略号的空间
+      margin-right: 0.5em; // 留出文字右边距离
+      color: #1585ff;
+      cursor: pointer;
+      &::before {
+        position: absolute;
+        content: "...";
+        top: -10px;
+        color: #333;
+        left: -0.25em;
+        transform: translateX(-100%);
+      }
+    }
+  }
+}
