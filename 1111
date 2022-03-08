@@ -1,0 +1,77 @@
+{
+	"code": "0",
+	"message": "success",
+	"data": [{
+		"keyStr": null,
+		"key": 0,
+		"value": "接站"
+	}, {
+		"keyStr": null,
+		"key": 1,
+		"value": "入住酒店"
+	}, {
+		"keyStr": null,
+		"key": 2,
+		"value": "会场接驳"
+	}, {
+		"keyStr": null,
+		"key": 3,
+		"value": "主会入场"
+	}, {
+		"keyStr": null,
+		"key": 4,
+		"value": "分会入场"
+	}, {
+		"keyStr": null,
+		"key": 5,
+		"value": "展厅参观"
+	}, {
+		"keyStr": null,
+		"key": 6,
+		"value": "样板点参观"
+	}, {
+		"keyStr": null,
+		"key": 7,
+		"value": "用餐"
+	}, {
+		"keyStr": null,
+		"key": 8,
+		"value": "送站"
+	}],
+	"success": true
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<van-picker show-toolbar :columns="columns" @change="onChange" />
+const cities = {
+  浙江: ['杭州', '宁波', '温州', '嘉兴', '湖州'],
+  福建: ['福州', '厦门', '莆田', '三明', '泉州'],
+};
+
+export default {
+  data() {
+    return {
+      columns: [{ values: Object.keys(cities) }, { values: cities['浙江'] }],
+    };
+  },
+  methods: {
+    onChange(picker, values) {
+      picker.setColumnValues(1, cities[values[0]]);
+    },
+  },
+};
