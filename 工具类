@@ -111,3 +111,21 @@ export const createDownloadA = function (url) {
   link.click()
   document.body.removeChild(document.body.querySelector('body>a'))
 }
+
+
+
+
+日期补0
+    formatTime (date) {
+      if (!date) {
+        return '—'
+      }
+      let time = new Date(date)
+      let y = time.getFullYear()
+      let m = time.getMonth() + 1
+      let d = time.getDate()
+      return `${y}-${this.isAddZero(m)}-${this.isAddZero(d)}`
+    },
+    isAddZero (t) {
+      return t < 10 ? '0' + t : t
+    }
