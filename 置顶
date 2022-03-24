@@ -1,0 +1,668 @@
+<!--
+ * @Descripttion: 活动执行列表
+ * @version: 1.0
+ * @Author: qupengfei
+ * @Date: 2020-11-13 10:00:08
+ * @LastEditors: zhangzijian
+ * @LastEditTime: 2021-07-07 10:18:37
+-->
+<template>
+  <div class="container-tab">
+    <div class="body">
+      <div class="filter">
+        <div class="left">
+          <el-form :model="searchData" :inline="true" class="demo-form-inline">
+            <el-form-item label="配置热搜词: ">
+              <el-input
+                v-model.trim="searchData.keyWords"
+                size="small"
+                placeholder="请输入关键字"
+                :maxlength="20"
+              ></el-input>
+            </el-form-item>
+            <el-form-item label="是否生效：">
+              <el-select
+                v-model="searchData.status"
+                size="small"
+                placeholder="请选择"
+                clearable
+              >
+                <el-option
+                  :label="item.name"
+                  :value="item.id"
+                  v-for="(item, index) in statusData"
+                  :key="index"
+                ></el-option>
+              </el-select>
+            </el-form-item>
+            <el-form-item label="创建日期：">
+              <div class="upTime">
+                <el-date-picker
+                  v-model="upTime"
+                  type="daterange"
+                  range-separator="至"
+                  value-format="yyyy-MM-dd HH:mm:ss"
+                  :default-time="['00:00:00', '23:59:59']"
+                  start-placeholder="开始月份"
+                  end-placeholder="结束月份"
+                  @change="changeUptime"
+                  clearable
+                >
+                </el-date-picker>
+              </div>
+            </el-form-item>
+            <el-button
+              type="primary"
+              size="small"
+              style="border-radius: 4px"
+              @click="search()"
+              >搜索</el-button
+            >
+          </el-form>
+        </div>
+        <div class="right">
+          <div class="export" @click="exportDetail()">
+            <i class="icon"></i>
+            <span>导出excel</span>
+          </div>
+          <el-button
+            type="primary"
+            size="small"
+            style="border-radius: 4px"
+            @click="handleAddEdit('add')"
+            >创建热搜词</el-button
+          >
+        </div>
+      </div>
+      <div class="table-div">
+        <el-table :data="tableData" style="width: 100%">
+          <el-table-column
+            header-align="center"
+            align="center"
+            label="编号"
+            width="80"
+            type="index"
+          >
+            <template slot-scope="scope">
+              {{ scope.$index + 1 }}
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="hotWords"
+            width="230px"
+            show-overflow-tooltip
+            label="热搜关键词"
+            header-align="center"
+            align="center"
+          >
+          </el-table-column>
+          <el-table-column
+            width="230px"
+            label="搜索次数"
+            prop="searchNumber"
+            header-align="center"
+            align="center"
+          >
+          </el-table-column>
+          <el-table-column
+            width="230px"
+            label="是否生效"
+            header-align="center"
+            align="center"
+            prop="status"
+          >
+            <template slot-scope="scope">
+              <span>{{ scope.row.status === 1 ? "否" : "是" }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            prop="createTime"
+            label="创建时间"
+            width="230px"
+            header-align="center"
+            align="center"
+          >
+            <template slot-scope="scope">
+              <span>{{ scope.row.createTime | formatTime }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            show-overflow-tooltip
+            prop="modifiedTime"
+            label="更新时间"
+            width="230px"
+            header-align="center"
+            align="center"
+          >
+            <template slot-scope="scope">
+              <span>{{ scope.row.modifiedTime | formatTime }}</span>
+            </template>
+          </el-table-column>
+          <el-table-column
+            label="操作"
+            align="center"
+            header-align="center"
+            class-name="oprateBtn"
+          >
+            <template slot-scope="scope">
+              <el-button
+                type="text"
+                size="small"
+                @click="
+                  sortHotWordsItem(
+                    scope.row,
+                    2,
+                    'moveposition',
+                    'up',
+                    scope.$index
+                  )
+                "
+                >上移</el-button
+              >
+              <el-button
+                type="text"
+                size="small"
+                @click="
+                  sortHotWordsItem(
+                    scope.row,
+                    3,
+                    'moveposition',
+                    'down',
+                    scope.$index
+                  )
+                "
+                >下移</el-button
+              >
+              <el-button
+                type="text"
+                size="small"
+                @click="sortHotWordsItem(scope.row, 1,'fixed','top',scope.$index)"
+                >置顶</el-button
+              >
+              <el-button
+                @click="handlepublish(scope.row)"
+                type="text"
+                size="small"
+                >{{ scope.row.status === 1 ? "启用" : "失效" }}</el-button
+              >
+              <el-button
+                type="text"
+                size="small"
+                @click="handleAddEdit('edit', scope.row)"
+                >编辑</el-button
+              >
+              <el-button
+                type="text"
+                size="small"
+                @click="handleDelete(scope.row.id)"
+                >删除</el-button
+              >
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </div>
+    <div class="gap"></div>
+    <div class="pagination">
+      <pagination
+        @change="handleCurrentChange"
+        :pageSize="searchData.pageSize"
+        :pageNumber="searchData.pageNum"
+        :pageArry="[10, 20, 30, 40, 50]"
+        :total="total"
+      ></pagination>
+    </div>
+    <!-- 新增/编辑弹窗 -->
+    <el-dialog
+      :title="title"
+      :visible.sync="dialogVisible"
+      width="500px"
+      @close="close"
+      :destroy-on-close="true"
+    >
+      <el-form
+        :model="dialogForm"
+        :rules="rules"
+        ref="dialogForm"
+        label-width="100px"
+      >
+        <el-form-item label="热搜词名称: " prop="hotWords">
+          <el-input
+            v-model="dialogForm.hotWords"
+            placeholder="请输入热搜词名称（尽量控制在5个字符左右）"
+            :maxlength="20"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="是否生效: " prop="status">
+          <el-switch
+            v-model="dialogForm.status"
+            :active-value="0"
+            :inactive-value="1"
+            active-color="#C4251D"
+            inactive-color="#CCC"
+          ></el-switch>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button type="primary" @click="submitForm()">确 定</el-button>
+        <el-button @click="cancel">取 消</el-button>
+      </span>
+    </el-dialog>
+  </div>
+</template>
+<script>
+// import pagination saveHotWordsfromsaveHotWords,  '@/components/common/pagination'
+// eslint-disable-next-line standard/object-curly-even-spacing
+import { hotWordsMove, saveHotWords, editHotWords, checkHotWords, hotWordsList, deleteHotWords } from '@/service/dmp/api'
+import pagination from '@/components/common/pagination'
+import global from '@/service/config.js'
+import { baseUrl } from '@/service/dmp/config.js'
+import { _formatterTime } from '@/utils/common'
+export default {
+  name: '',
+  // 注册组件
+  components: { pagination },
+  // 数据
+  data () {
+    return {
+      previousId: '',
+      title: '创建热搜词',
+      upTime: '',
+      total: 0,
+      dialogVisible: false,
+      startDate: '',
+      // 查询的参数数据
+      searchData: {
+        keyWords: '',
+        startTime: '',
+        endTime: '',
+        status: '',
+        pageSize: 10,
+        pageNum: 1
+      },
+      // 添加/编辑弹窗
+      dialogForm: {
+        hotWords: '',
+        status: 1
+      },
+      statusData: [
+        { name: '是', id: 0 },
+        { name: '否', id: 1 },
+        { name: '全部类型', id: 2 }
+      ],
+      rules: {
+        hotWords: [
+          { required: true, message: '请输入热搜词', trigger: 'blur' }
+        ]
+      },
+      tableData: []
+    }
+  },
+  // vue实例被创建时
+  created () {
+    this.getTableData()
+  },
+  // vue实例被挂载至dom上时
+  mounted () { },
+  filters: {
+    // 时间格式化
+    formatTime (val) {
+      if (val) {
+        return _formatterTime(val, '-', 'long')
+      }
+    }
+  },
+  // 实例方法
+  methods: {
+    // 排序置顶
+    sortHotWordsItem (item, num, sortType, type, index) {
+      let previousId
+      let message
+      if (type === 'up') {
+        if (index === 0) {
+          this.$message.warning('该项已排在第一位！')
+          return
+        }
+        message = '上移成功!'
+        previousId = this.tableData[index - 1].id
+      } else if (type === 'down') {
+        if (sortType === 'moveposition' && index === (this.tableData.length - 1)) {
+          this.$message.warning('该项已排在最后一位！')
+          return
+        }
+        message = '下移成功!'
+        previousId = this.tableData[index + 1].id
+      } else if (type === 'top') {
+        if (index === 0) {
+          this.$message.warning('该项已置顶在第一位！')
+          return
+        }
+        message = '置顶成功'
+      }
+      // if (num) {
+      //   let target = this.findTarget(item, num, index)
+      //   if (target === '已排在第一位' || target === '已排在最后一位' || target === '已置顶在第一位') {
+      //     this.$message({
+      //       type: 'warning',
+      //       message: target
+      //     })
+      //     return
+      //   }
+      // }
+      let data = { id: item.id, type: num, nearId: previousId }
+      hotWordsMove(data).then(res => {
+        if (res.code === '0') {
+          this.$message.success(message)
+          this.getTableData()
+        } else {
+          this.$message({ type: 'error', message: res.message })
+        }
+      }).catch((err) => {
+        this.$message({ type: 'error', message: err.message })
+      })
+    },
+    handlepublish (row) {
+      let params = {
+        hotWords: row.hotWords,
+        id: Number(row.id),
+        status: Math.abs(row.status - 1)
+      }
+      editHotWords(params).then(res => {
+        if (res.code === '0') {
+          if (row.status === 1) {
+            this.$message.success('启用成功')
+          } else {
+            this.$message.error('已失效')
+          }
+          this.getTableData()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    },
+    handleDelete (row) {
+      this.$confirm('是否确定删除该条数据?', '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      }).then(() => {
+        deleteHotWords(row).then(res => {
+          if (res.code === '0') {
+            this.$message({
+              type: 'success',
+              message: '删除成功!'
+            })
+            this.getTableData()
+          } else {
+            this.$message({ type: 'error', message: res.message })
+          }
+        }).catch(err => {
+          console.log(err)
+        })
+      }).catch(() => {
+        this.$message({
+          type: 'info',
+          message: '已取消删除'
+        })
+      })
+    },
+    exportDetail () {
+      const { keyWords, startTime, endTime } = this.searchData
+      let payload = Object.assign({}, this.searchData)
+      payload.status = payload.status === 2 ? '' : payload.status
+      let options = {
+        keyWords: keyWords || '',
+        startTime: startTime || '',
+        endTime: endTime || '',
+        status: payload.status || ''
+      }
+      console.log(status, 'status')
+      // ${global.apiRoot}${baseUrl}
+      window.open(`${global.apiRoot}${baseUrl}/applet/hotWords/excelHotWordsConfig/?keyWords=${options.keyWords}&startTime=${options.startTime}&endTime=${options.endTime}&status=${options.status}`)
+    },
+    getTableData () {
+      // 防止修改影响到源数据
+      let payload = Object.assign({}, this.searchData)
+      payload.status = payload.status === 2 ? '' : payload.status
+      hotWordsList(payload).then(res => {
+        if (res.code === '0') {
+          this.tableData = res.data.list || []
+          this.total = Number(res.data.total)
+          // this.newList = res.data.list.map(res => {
+          //   return { keyWords: res.hotWords, id: res.id, status: res.status }
+          // })
+        } else {
+          this.$message({
+            type: 'error',
+            message: res.message
+          })
+        }
+      })
+    },
+    handleAddEdit (type, row) {
+      this.dialogVisible = true
+      if (type === 'add') {
+        this.title = '创建热搜词'
+        this.dialogForm = {
+          hotWords: '',
+          status: 1
+        }
+        this.$nextTick(() => {
+          this.$refs.dialogForm.clearValidate()
+        })
+      } else {
+        this.title = '编辑热搜词'
+        this.dialogForm = {
+          hotWords: row.hotWords,
+          status: row.status,
+          id: row.id
+        }
+        this.$nextTick(() => {
+          this.$refs.dialogForm.clearValidate()
+        })
+      }
+    },
+    // 创建热搜词
+    saveWords () {
+      let params = {
+        hotWords: this.dialogForm.hotWords,
+        status: this.dialogForm.status
+      }
+      saveHotWords(params).then(res => {
+        if (res.code === '0') {
+          this.$message.success('创建成功')
+          this.dialogVisible = false
+          this.getTableData()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    },
+    // 编辑热搜词
+    editWords () {
+      let params = {
+        id: this.dialogForm.id,
+        hotWords: this.dialogForm.hotWords,
+        status: this.dialogForm.status
+      }
+      editHotWords(params).then(res => {
+        if (res.code === '0') {
+          this.$message.success('编辑成功')
+          this.dialogVisible = false
+          this.getTableData()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+    },
+    submitForm () {
+      let params = this.dialogForm.hotWords
+      if (this.title === '创建热搜词') {
+        this.$refs.dialogForm.validate((valid) => {
+          if (valid) {
+            checkHotWords(params).then(res => {
+              if (res.code === '0') {
+                if (res.data === false) {
+                  this.saveWords()
+                } else {
+                  this.$message.error('该热搜词已存在')
+                }
+              } else {
+                this.$message.error(res.message)
+              }
+            })
+          }
+        })
+      } else if (this.title === '编辑热搜词') {
+        this.$refs.dialogForm.validate((valid) => {
+          if (valid) {
+            this.editWords()
+          }
+        })
+      }
+    },
+    search () {
+      this.searchData.pageNum = 1
+      this.getTableData()
+    },
+    handleCurrentChange (cur) {
+      this.searchData.pageSize = cur.pageSize
+      this.searchData.pageNum = cur.currentPage
+      this.getTableData()
+    },
+    close () {
+      this.$refs.dialogForm.clearValidate()
+      // this.dialogForm.hotWords = ''
+    },
+    cancel () {
+      this.$refs.dialogForm.resetFields()
+      this.dialogVisible = false
+    },
+    changeUptime (value) {
+      console.log(value)
+      this.searchData.startTime = value ? value[0] : ''
+      this.searchData.endTime = value ? value[1] : ''
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.container-tab {
+  height: calc(~"100% - 55px");
+  overflow-y: auto;
+  /deep/ .el-dialog__body .el-select {
+    width: 100%;
+  }
+  .body {
+    padding: 10px;
+    box-sizing: border-box;
+    .filter {
+      padding: 10px 0;
+      .upTime {
+        display: inline-block;
+        margin-right: 15px;
+        /deep/ .el-date-editor {
+          width: 258px;
+        }
+        /deep/ .el-date-editor .el-range-separator {
+          width: 13%;
+        }
+      }
+      .left {
+        float: left;
+        .line {
+          text-align: center;
+          color: #bbb;
+        }
+        /deep/ .el-form-item {
+          margin-bottom: 10px;
+          margin-right: 20px;
+        }
+      }
+      .right {
+        display: flex;
+        justify-content: flex-end;
+        margin-right: 15px;
+        flex: 1;
+        .export {
+          display: flex;
+          align-items: center;
+          margin-right: 15px;
+          justify-content: center;
+          border: 1px #ccc solid;
+          cursor: pointer;
+          .icon {
+            display: inline-block;
+            width: 28px;
+            height: 30px;
+            background: url("../../../assets/dmp/img/daochu.png") no-repeat
+              center center;
+          }
+          span {
+            color: #666;
+            margin-right: 6px;
+          }
+        }
+      }
+    }
+    .button-div {
+      height: 50px;
+      line-height: 50px;
+      /deep/ .el-button {
+        margin-right: 10px;
+      }
+      /deep/ .el-button--small {
+        padding: 7px 10px;
+      }
+      .download {
+        color: #c4251d;
+        text-decoration: underline;
+      }
+    }
+    .table-div {
+      margin-top: 10px;
+      /deep/ .el-table .jump-cell .cell.el-tooltip {
+        color: #1585ff;
+      }
+      .jump-link {
+        color: #1585ff;
+        cursor: pointer;
+      }
+    }
+  }
+  .money {
+    margin-right: 6px;
+  }
+  /deep/ .el-input__inner:hover {
+    border-color: #bbb;
+  }
+  /deep/ .el-input-number {
+    width: 123px;
+  }
+  /deep/ .el-dialog .el-button {
+    border-radius: 4px;
+  }
+  .gap {
+    height: 5px;
+    background-color: #f5f5f5;
+    position: fixed;
+    bottom: 57px;
+    width: calc(~"100% - 238px");
+    right: 25px;
+  }
+  .pagination {
+    padding: 5px;
+    z-index: 999;
+    width: calc(~"100% - 228px");
+    background-color: #fff;
+    position: fixed;
+    bottom: 15px;
+    right: 25px;
+    text-align: right;
+    /deep/ .el-pagination.is-background .el-pager li:not(.disabled).active {
+      color: #fff;
+    }
+  }
+}
+</style>
