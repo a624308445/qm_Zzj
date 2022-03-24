@@ -1,0 +1,367 @@
+<!--
+ * @Descripttion: ~
+ * @version: ~
+ * @Author: Caihua
+ * @Date: 2021-12-17 13:51:49
+ * @LastEditors: zhangzijian
+ * @LastEditTime: 2022-03-24 11:18:33
+-->
+<template>
+  <div class="container">
+    <div class="search-content">
+      <el-form :model="searchData" :inline="true" class="demo-form-inline">
+        <el-form-item label="申请单搜索: ">
+          <el-input
+            v-model.trim="searchData.keyWords"
+            size="small"
+            placeholder="请输入"
+            :maxlength="50"
+          ></el-input>
+        </el-form-item>
+        <el-form-item label="状态筛选：">
+          <el-select
+            v-model="searchData.status"
+            size="small"
+            placeholder="请选择"
+            clearable
+            @clear="clearData"
+          >
+            <el-option
+              :label="item.name"
+              :value="item.id"
+              v-for="item in searchOptons"
+              :key="item.id"
+            ></el-option>
+          </el-select>
+        </el-form-item>
+        <el-form-item label="创建日期: ">
+          <div class="upTime">
+            <el-date-picker
+              v-model="daterange"
+              type="daterange"
+              range-separator="至"
+              value-format="yyyy-MM-dd"
+              start-placeholder="开始月份"
+              end-placeholder="结束月份"
+            >
+            </el-date-picker>
+          </div>
+        </el-form-item>
+        <el-button
+          type="primary"
+          size="small"
+          style="border-radius: 4px"
+          @click="search()"
+          >查 询</el-button
+        >
+      </el-form>
+    </div>
+    <div
+      class="table-box"
+      :style="total === 0 ? 'margin-bottom:16px;' : ''"
+      v-loading="tableLoading"
+    >
+      <el-table
+        :data="tableData"
+        height="100%"
+        tooltip-effect="light"
+        @sort-change="sortChange"
+      >
+        <!-- <el-table-colum
+          show-overflow-tooltip
+          prop="exchangeNo"
+          label="申请单号"
+          width="250"
+        >
+        </el-table-colum> -->
+        <el-table-column
+          show-overflow-tooltip
+          prop="exchangeNo"
+          label="申请单号"
+          width="250"
+        ></el-table-column>
+        <el-table-column show-overflow-tooltip label="服务点名称" width="250">
+          <template slot-scope="scope">
+            <span>{{ scope.row.burkObj.name3 }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="状态" width="200" show-overflow-tooltip>
+          <template slot-scope="scope">
+            <span>{{ scope.row.status | formatStatus }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column
+          prop="burks"
+          label="序列号"
+          width="200"
+          show-overflow-tooltip
+        ></el-table-column>
+        <el-table-column
+          prop="sendGoodsCustomerName"
+          label="申请人"
+          width="150"
+        ></el-table-column>
+        <el-table-column
+          prop="sendGoodsCustomerPhone"
+          label="申请手机号"
+          width="150"
+        ></el-table-column>
+        <el-table-column prop="createTime" label="创建时间" sortable="custom">
+          <template slot-scope="scope">
+            <span>{{ scope.row.createTime | formatTime }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="操作" width="150">
+          <template slot-scope="scope">
+            <el-button type="text" @click="hadnleView(scope.row)"
+              >查看</el-button
+            >
+          </template>
+        </el-table-column>
+      </el-table>
+    </div>
+    <el-pagination
+      v-if="total > 0"
+      background
+      @size-change="handleSizeChange"
+      @current-change="handleCurrentChange"
+      :pageSize="page.pageSize"
+      :page-sizes="[10, 20, 50, 100]"
+      :current-page="page.pageNum"
+      layout="total, prev, pager, next, sizes"
+      :total="total"
+    ></el-pagination>
+  </div>
+</template>
+<script>
+import { _formatterTime } from '@/utils/common'
+import { orderListData } from '@/service/dmp/api'
+// import dayjs from 'dayjs'
+export default {
+  name: 'adminTeam',
+  // 注册组件
+  // 数据
+  data () {
+    return {
+      searchData: {
+        barcd: '',
+        status: '',
+        createTimeSort: 1
+      },
+      daterange: null,
+      searchOptons: [
+        { id: 0, name: '审核中' },
+        { id: 1, name: '已收货' },
+        { id: 2, name: '已同意' },
+        { id: 3, name: '已完成' },
+        { id: 4, name: '已关闭' }
+      ],
+      recordList: [],
+      total: 0,
+      meetUserId: '',
+      scheduleVisible: false,
+      page: {
+        pageSize: 10,
+        pageNum: 1
+      },
+      tableLoading: false,
+      tableData: []
+    }
+  },
+  // 接收父组件传入的参数
+  props: {},
+  // vue实例被创建时
+  created () {
+    this.getTableData()
+  },
+  // vue实例被挂载至dom上时
+  mounted () { },
+  // keep-alive之后页面会缓存，不会执行created(),和mounted(),但是会执行activated()
+  activated () { },
+  // 退出的生命周期钩子
+  deactivated () { },
+  // 销毁
+  destroyed () { },
+  // 属性值计算
+  computed: {
+    id () {
+      return this.$route.query.id
+    }
+  },
+  filters: {
+    // 时间格式化
+    formatTime (val) {
+      if (val) {
+        return _formatterTime(val, '-', 'long')
+      }
+    },
+    formatStatus (val) {
+      switch (val) {
+        case 0:
+          return '审核中'
+        case 1:
+          return '已收货'
+        case 2:
+          return '已同意'
+        case 3:
+          return '已完成'
+        case 4:
+          return '已关闭'
+      }
+    }
+  },
+  // 数据侦听
+  watch: {
+
+  },
+  // 实例方法
+  methods: {
+    hadnleView ({ id }) {
+      this.$router.push({
+        path: '/application/detail',
+        query: {
+          id: id
+        }
+      })
+    },
+    clearData () {
+      this.getTableData()
+    },
+    sortChange (e) {
+      this.searchData.createTimeSort = e.order === 'ascending' ? 0 : 1
+      this.getTableData()
+    },
+    search () {
+      this.page.pageNum = 1
+      this.getTableData()
+    },
+    handleSizeChange (val) {
+      this.page = {
+        pageSize: val,
+        pageNum: 1
+      }
+      this.getTableData()
+    },
+    handleCurrentChange (val) {
+      this.page = {
+        ...this.page,
+        pageNum: val
+      }
+      this.getTableData()
+    },
+    closeDialog () {
+      this.scheduleVisible = false
+    },
+    handleSchedule ({ id }) {
+      this.scheduleVisible = true
+      this.meetUserId = id
+    },
+    getTableData () {
+      this.tableLoading = true
+      let startTime, endTime
+      if (this.daterange) {
+        startTime = this.daterange[0]
+        endTime = this.daterange[1]
+      }
+      orderListData({
+        ...this.page,
+        ...this.searchData,
+        startTime,
+        endTime
+      }).then(res => {
+        if (res.code === '0') {
+          this.tableData = res.data.list
+          this.total = Number(res.data.total)
+        } else {
+          this.$message.error(res.message)
+        }
+        this.tableLoading = false
+      }).catch(err => {
+        this.tableLoading = false
+        this.$message.error(err.message)
+      })
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  // padding: 0 16px;
+  .schedule {
+    /deep/.el-dialog__body {
+      padding: 10px;
+    }
+  }
+  .search-content {
+    margin: 12px;
+    .el-form-item {
+      margin-bottom: 0;
+    }
+    .el-input {
+      width: 200px;
+    }
+    .upTime {
+      width: 200px;
+    }
+  }
+
+  .tooltip {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .table-box {
+    flex: 1;
+    height: 0;
+    padding: 0 10px;
+  }
+  .el-dropdown-link {
+    color: #409eff;
+    cursor: pointer;
+    font-size: 12px;
+  }
+  .buttom-btn-div {
+    height: 50px;
+    line-height: 50px;
+    box-shadow: 0 -1px 9px 0 #eaeaea;
+    padding: 0 16px;
+    background-color: #fff;
+    text-align: right;
+  }
+  .el-icon-arrow-down {
+    font-size: 12px;
+  }
+  .el-pagination {
+    text-align: right;
+    margin-top: 12px;
+    margin: 12px 10px 16px;
+    padding: 0;
+    /deep/ .el-pagination__sizes {
+      margin-right: 0;
+    }
+
+    /deep/ .el-select .el-input {
+      margin-right: 0;
+    }
+  }
+
+  .all-check {
+    /deep/ .el-checkbox__input.is-indeterminate .el-checkbox__inner {
+      background-color: #fff;
+      border-color: #bbb;
+    }
+  }
+
+  .dialogStyle {
+    /deep/.el-form-item {
+      /deep/.el-input {
+        width: 250px;
+      }
+    }
+  }
+}
+</style>
