@@ -1,0 +1,945 @@
+<!--
+ * @Description: 发现Banner
+ * @Author: 张亚明
+ * @Date: 2021-01-27 10:25:27
+ * @LastEditTime: 2022-02-24 18:20:28
+ * @LastEditors: 张亚明
+-->
+
+<template>
+<div>
+  <el-dialog width="830px" top="5vh" custom-class="advertisementDialog" :close-on-click-modal="false" :title="poptype=='advertisement'?'弹窗广告配置':'轮播图配置'" :visible.sync="dialogVisible" @close="closeDialog">
+      <div class="advertisement-dialog-content">
+         <div class="advertisement-dialog-item" style="display: flex;margin-left: 235px;">
+            <!-- <div class="item-label"><span style="color:#ca1d22;">*</span>{{lable}}</div>  -->
+            <div class="label-left" style="margin-left:0;">
+                <div class="deleteImg" v-if="jumpObject1.picUrl" @click.stop="deleteimg(1)"><img :src="deleteImg" alt=""><div>一</div></div>
+                <el-upload class="avatar-uploader" :action="postUrl + 'network-service/network/electronic/attachUpload'"
+                  :show-file-list="false" :on-success="(response, file, fileList, type) => onSuccess(response, file, fileList, 1)" :on-progress="(type) => uploadImgProcess(1)" :on-error="errorUpload" :before-upload="beforeImgUpload">
+                  <img v-if="jumpObject1.picUrl" :src="jumpObject1.picUrl" class="avatar" :class="[poptype+'avatar']" />
+                  <i v-else class="el-icon-plus avatar-uploader-icon" :class="[poptype+'avatar-uploader-icon']"></i>
+                    <div class="sizeTips" v-if="!jumpObject1.picUrl">
+                      <template v-if="poptype=='advertisement'">
+                       尺寸500*339
+                      </template>
+                      <template v-else>
+                        <div>上传banner图</div>
+                      </template>
+                    <p style="color: #CA1D22">必填</p></div>
+                </el-upload>
+            </div>
+            <!-- 发现首页banner调整 -->
+            <!-- <div>
+              <div class="label-right" style="margin-left:8px;">
+                <div class="deleteImg" v-if="jumpObject2.picUrl" @click.stop="deleteimg(2)"><img :src="deleteImg" alt=""><div>一</div></div>
+                <el-upload class="avatar-uploader" :action="postUrl + 'network-service/network/electronic/attachUpload'"
+                  :show-file-list="false" :on-success="(response, file, fileList, type) => onSuccess(response, file, fileList, 2)" :on-progress="(type) => uploadImgProcess(2)" :on-error="errorUpload" :before-upload="beforeImgUpload">
+                  <img v-if="jumpObject2.picUrl" :src="jumpObject2.picUrl" class="avatar" :class="[poptype+'avatar']" />
+                  <i v-else class="el-icon-plus avatar-uploader-icon" :class="[poptype+'avatar-uploader-icon']"></i> 
+                    <div class="sizeTips" v-if="!jumpObject2.picUrl"  style="width: 100px;">
+                      <template v-if="poptype=='advertisement'">
+                       尺寸267*167
+                      </template>
+                      <template v-else>
+                        <div>尺寸116*116</div>
+                      </template>
+                      <p style="color: #CA1D22">必填</p>
+                    </div>
+                </el-upload>
+              </div>
+              <div class="label-right" style="margin-left:8px;" >
+                <div class="deleteImg" v-if="jumpObject3.picUrl" @click.stop="deleteimg(3)"><img :src="deleteImg" alt=""><div>一</div></div>
+                <el-upload class="avatar-uploader" :action="postUrl + 'network-service/network/electronic/attachUpload'"
+                  :show-file-list="false" :on-success="(response, file, fileList, type) => onSuccess(response, file, fileList, 3)" :on-progress="(type) => uploadImgProcess(3)" :on-error="errorUpload" :before-upload="beforeImgUpload">
+                  <img v-if="jumpObject3.picUrl" :src="jumpObject3.picUrl" class="avatar" :class="[poptype+'avatar']" />
+                  <i v-else class="el-icon-plus avatar-uploader-icon" :class="[poptype+'avatar-uploader-icon']"></i>
+                    <div class="sizeTips" v-if="!jumpObject3.picUrl" style="width: 100px;">                      
+                      <template v-if="poptype=='advertisement'">
+                       尺寸267*167
+                      </template>
+                      <template v-else>
+                        <div>尺寸116*116</div>
+                      </template>
+                      <p style="color: #CA1D22">必填</p>
+                    </div>
+                </el-upload>
+              </div>
+            </div> -->
+         </div>
+          <!-- <div v-if="poptype=='advertisement'" class="advertisement-dialog-item" style="align-items:center;">
+            <div class="item-label"><span style="color:#ca1d22;">*</span>展示日期</div>
+            <div class="label-right">
+              <el-date-picker
+                v-model="dateValue"
+                :unlink-panels="true"
+                :picker-options="pickerOption"
+                type="daterange"
+                start-placeholder="开始日期"
+                end-placeholder="结束日期" @change="timeChange">
+              </el-date-picker>
+            </div>
+          </div> -->
+          <div class="advertisement-dialog-box">
+          <div style="margin-bottom: 15px; font-size: 12px; color: #999">支持上传702*224，扩展名jpg/jpeg/png，小于5M</div>
+          <div class="advertisement-item">
+            <div>
+              <div><i>*</i>banner标题</div>
+              <div>
+                <el-input maxlength="50" style="width: 350px" v-model.trim="jumpObject1.bannerTitle" placeholder="请填写标题名称(不超过50字)"></el-input> 
+              </div>
+            </div>
+            <div class="advertisement-dialog-item" style="align-items:center;">
+            <div class="item-label" style="width: 100px">跳转类型</div>
+              <div class="label-right">
+                <el-select v-model="jumpObject1.selectedValue" placeholder="请选择跳转类型" @change="typeChange(1)">
+                  <el-option v-for="item in selects" :key="item.type" :label="item.name" :value="item.type"></el-option>
+                </el-select>
+              </div>
+            </div>
+            <div class="advertisement-dialog-item" v-if="jumpObject1.selectedValue!=''">
+              <div class="item-label">跳转对象</div>
+              <div class="label-right addItem" v-if="jumpObject1.selectedValue!=''&&jumpObject1.selectedValue!=8&&jumpObject1.selectedValue!=10">
+                <template v-if="!jumpObject1.showChoseItem">
+                  <el-button size="mini" @click.stop="addObject(1)">添加对象</el-button>
+                </template>
+                <template v-else>
+                  <div :class="jumpObject1.selectedValue === 4 || jumpObject1.selectedValue === 7 ? 'deleteImg1' : 'deleteImg'" @click="deleteItem(1)"><img :src="deleteImg" alt=""><div>一</div></div>
+                    <component :is="jumpObject1.choseItemId" :item="jumpObject1.choseItem"  width="390" marginTop="16" marginLeft="16" :operationList="[]"  :index="0"></component>
+                  <!-- <component :is="jumpObject1.choseItemId" :item="jumpObject1.choseItem" :type="jumpObject1.choseItemType" :index="0"></component> -->
+                </template>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject1.selectedValue!=''&&jumpObject1.selectedValue==8">
+                <el-input placeholder="请填写微信小程序能支持跳转的链接地址" style="width:350px" v-model.trim="jumpObject1.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject1.selectedValue!=''&&jumpObject1.selectedValue==10">
+                <el-input placeholder="请填写微信小程序的跳转页面" style="width:350px" v-model.trim="jumpObject1.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+            </div>
+          </div>
+          <!-- 发现banner调整2张小图不显示 -->
+          <div class="advertisement-item" v-if="false">
+            <div>
+              <div><i>*</i>小图标题1</div>
+              <div>
+                <el-input maxlength="50" v-model.trim="jumpObject2.bannerTitle" placeholder="请填写标题名称(不超过50字)"></el-input>
+              </div>
+            </div>
+            <div class="advertisement-dialog-item" style="align-items:center;">
+            <div class="item-label" style="width: 100px">跳转类型</div>
+              <div class="label-right">
+                <el-select v-model="jumpObject2.selectedValue" placeholder="请选择跳转类型" @change="typeChange(2)">
+                  <el-option v-for="item in selects" :key="item.type" :label="item.name" :value="item.type"></el-option>
+                </el-select>
+              </div>
+            </div>
+            <div class="advertisement-dialog-item">
+            <div class="item-label">跳转对象</div>
+              <div class="label-right addItem" v-if="jumpObject2.selectedValue!=''&&jumpObject2.selectedValue!=8&&jumpObject2.selectedValue!=10">
+                <template v-if="!jumpObject2.showChoseItem">
+                  <el-button size="mini" @click.stop="addObject(2)">添加对象</el-button>
+                </template>
+                <template v-else>
+                  <div :class="jumpObject2.selectedValue === 4 || jumpObject2.selectedValue === 7 ? 'deleteImg1' : 'deleteImg'" @click="deleteItem(2)"><img :src="deleteImg" alt=""><div>一</div></div>
+                  <component :is="jumpObject2.choseItemId" :item="jumpObject2.choseItem"  width="390" marginTop="16" marginLeft="16" :operationList="[]"  :index="0"></component>
+                  <!-- <component :is="jumpObject2.choseItemId" :item="jumpObject2.choseItem" :type="jumpObject2.choseItemType" :index="0"></component> -->
+                </template>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject2.selectedValue!=''&&jumpObject2.selectedValue==8">
+                <el-input placeholder="请填写微信小程序能支持跳转的链接地址" style="width:210px" v-model.trim="jumpObject2.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject2.selectedValue!=''&&jumpObject2.selectedValue==10">
+                <el-input placeholder="请填写微信小程序的跳转页面" style="width:350px" v-model.trim="jumpObject2.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+            </div>
+          </div>
+          <div class="advertisement-item" v-if="false">
+            <div>
+              <div><i>*</i>小图标题2</div>
+              <div>
+                <el-input maxlength="50" v-model.trim="jumpObject3.bannerTitle" placeholder="请填写标题名称(不超过50字)"></el-input>
+              </div>
+            </div>
+            <div class="advertisement-dialog-item" style="align-items:center;">
+            <div class="item-label" style="width: 100px">跳转类型</div>
+              <div class="label-right">
+                <el-select v-model="jumpObject3.selectedValue" placeholder="请选择跳转类型" @change="typeChange(3)">
+                  <el-option v-for="item in selects" :key="item.type" :label="item.name" :value="item.type"></el-option>
+                </el-select>
+              </div>
+            </div>
+            <div class="advertisement-dialog-item">
+            <div class="item-label">跳转对象</div>
+              <div class="label-right addItem" v-if="jumpObject3.selectedValue!=''&&jumpObject3.selectedValue!=8&&jumpObject3.selectedValue!=10">
+                <template v-if="!jumpObject3.showChoseItem">
+                  <el-button size="mini" @click.stop="addObject(3)">添加对象</el-button>
+                </template>
+                <template v-else>
+                  <div :class="jumpObject3.selectedValue === 4 || jumpObject3.selectedValue === 7 ? 'deleteImg1' : 'deleteImg'" @click="deleteItem(3)"><img :src="deleteImg" alt=""><div>一</div></div>
+                  <component :is="jumpObject3.choseItemId" :item="jumpObject3.choseItem"  width="390" marginTop="16" marginLeft="16" :operationList="[]"  :index="0"></component>
+                  <!-- <component :is="jumpObject3.choseItemId" :item="jumpObject3.choseItem" :type="jumpObject3.choseItemType" :index="0"></component> -->
+                </template>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject3.selectedValue!=''&&jumpObject3.selectedValue==8">
+                <el-input placeholder="请填写微信小程序能支持跳转的链接地址" style="width:210px" v-model.trim="jumpObject3.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+              <div class="label-right addItem" v-if="jumpObject3.selectedValue!=''&&jumpObject3.selectedValue==10">
+                <el-input placeholder="请填写微信小程序的跳转页面" style="width:350px" v-model.trim="jumpObject3.jumpurl" maxlength="500">
+                </el-input>
+              </div>
+            </div>
+          </div>
+          <div class="publishTime-content">
+            <div class="advertisement-dialog-item" style="align-items:center;">
+            <div class="item-label">发布状态</div>
+              <div class="label-right" style="margin-left: 0">
+                <el-select v-model="isEnabled" placeholder="请选择发布类型" @change="statusChange">
+                  <el-option v-for="item in publishType" :key="item.id" :label="item.name" :value="item.id"></el-option>
+                </el-select>
+              </div>
+            </div>
+            <div class="publishType">
+              <el-radio-group v-model="permanentShow" v-show="isEnabled === 0" @change="publishTypeChange">
+                <el-radio :label="1">永久有效</el-radio>
+                <el-radio :label="0">有效时间</el-radio>
+              </el-radio-group>
+              <div v-show="permanentShow === 0" style="margin-top: 15px">
+                <el-date-picker
+                  v-model="pushTime"
+                  clearable
+                  value-format="yyyy-MM-dd HH:mm"
+                  format="yyyy-MM-dd HH:mm"
+                  :picker-options="pickerOption"
+                  @change="pushTimeChange"
+                  type="datetimerange"
+                  range-separator="至"
+                  start-placeholder="开始日期"
+                  end-placeholder="结束日期">
+                </el-date-picker>
+              </div>
+            </div>
+          </div>
+          </div>
+      </div>
+      <div slot="footer" class="dialog-footer">
+        <el-button size="mini" @click.stop="closeDialog">取 消</el-button>
+        <el-button size="mini" type="primary" @click.stop="save">保存</el-button>
+      </div>
+    </el-dialog>
+      <!-- <addMaterial :hardwareVisible="addDialogVisible" :checkType="'sigle'" @save="saveItem" @closeDialog="addDialogVisible=false"></addMaterial> -->
+    <component :type="''" :is="activeObject.componentId" :from="from" :hardwareVisible="addDialogVisible" :modalTitle="modalTitle" :checkType="'sigle'" @save="saveItem" @closeDialog="addDialogVisible=false"></component>
+</div>
+
+</template>
+
+<script>
+let reg = /[^\u0020-\u007E\u00A0-\u00BE\u2E80-\uA4CF\uF900-\uFAFF\uFE30-\uFE4F\uFF00-\uFFEF\u0080-\u009F\u2000-\u201f\u2026\u2022\u20ac\r\n]/g
+// 此组件点击保存时（编辑，新增），抛出form表单数据跟当前选定的choseItem供外部操作，会提供所有调用接口的数据。在父组件调用保存相关接口.
+import { myMixin } from '@/common/uploadMixin'
+import { attachUpload } from '@/service/dmp/config'
+import { softwareDetail, queryById, getDetailInfo, getschemeDetail, getCaseBaseData, discoveryInfo, appletVideoInfo, queryArticleInfo, queryChannelInfo } from '@/service/dmp/api'
+import addHardware from '../addItemDialog/addHardware'
+import addSolution from '../addItemDialog/addSolution'
+import addVideo from '../addItemDialog/addVideo'
+import hardwareItem from '../item/hardwareItem'
+import mainPart from '../addItemDialog/mainPart'
+import solutionCaseItem from '../item/solutionCaseItem'
+import videoItem from '../item/videoItem'
+import articleItem from '../item/articleItem'
+import mainPartItem from '../item/mainPartItem'
+import channelItem from '../item/channelItem'
+import addMaterial from '../addItemDialog/addMaterial'
+import addCase from '../addItemDialog/addCase'
+import addArticle from '../addItemDialog/addArticle'
+import addChannel from '../addItemDialog/addChannel'
+import subjectItem from '@/components/dmp/discovery/subjectItem'
+import addSoftware from '../addItemDialog/addSoftware'
+import deleteImg from '@/assets/dmp/icon/delete.png'
+export default {
+  mixins: [myMixin],
+  name: '',
+  // 注册组件
+  components: {addSoftware, addHardware, hardwareItem, addMaterial, addCase, solutionCaseItem, addSolution, mainPart, mainPartItem, addVideo, videoItem, articleItem, addChannel, addArticle, channelItem, subjectItem},
+  // 数据
+  data () {
+    return {
+      activeObject: {picUrl: '', bannerTitle: '', selectedValue: '', componentId: '', showChoseItem: false, choseItemId: '', choseItem: {}, choseItemType: '', jumpurl: ''},
+      jumpObject1: {picUrl: '', bannerTitle: '', selectedValue: '', componentId: '', showChoseItem: false, choseItemId: '', choseItem: {}, choseItemType: '', jumpurl: '', bannerShowType: 0},
+      jumpObject2: {picUrl: '', bannerTitle: '', selectedValue: '', componentId: '', showChoseItem: false, choseItemId: '', choseItem: {}, choseItemType: '', jumpurl: '', bannerShowType: 1},
+      jumpObject3: {picUrl: '', bannerTitle: '', selectedValue: '', componentId: '', showChoseItem: false, choseItemId: '', choseItem: {}, choseItemType: '', jumpurl: '', bannerShowType: 2},
+      // lable: '',
+      picInfo: {},
+      itemType: '',
+      modalTitle: '',
+      dialogVisible: false,
+      deleteImg,
+      bannerTitle: '',
+      postUrl: attachUpload,
+      dialogTitle: '',
+      title: '',
+      dateValue: [],
+      selects: [{type: 0, name: '不跳转'}, {type: 1, name: '硬件'}, {type: 2, name: '方案'}, {type: 3, name: '案例'}, {type: 4, name: '频道'}, {type: 5, name: '文章'}, {type: 6, name: '视频'}, {type: 7, name: '主体'}, {type: 8, name: '链接'}, {type: 10, name: '小程序页面'}, {type: 11, name: '软件'}],
+      pickerOption: {
+        disabledDate: function (date) { // 禁止选择今天之前的日期
+          const today = new Date().toLocaleDateString()
+          return date < new Date(today)
+        }
+      },
+      addDialogVisible: false,
+      isEnabled: 0,
+      permanentShow: 1,
+      pushTime: [],
+      publishType: [{id: 0, name: '上架'}, {id: 1, name: '下架'}]
+    }
+  },
+  props: ['visible', 'dialogType', 'item', 'disableTime', 'poptype', 'from'],
+  // 热门banner poptype===hotbanner
+  // vue实例被创建时
+  created () {
+  },
+  // vue实例被挂载至dom上时
+  mounted () {
+  },
+  // keep-alive之后页面会缓存，不会执行created(),和mounted(),但是会执行activated()
+  activated () { },
+  // 退出的生命周期钩子
+  deactivated () { },
+  // 销毁
+  destroyed () { },
+  // 属性值计算
+  computed: {},
+  // 数据侦听
+  watch: {
+    'jumpObject1.jumpurl': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject1.jumpurl = val.replace(reg, '')
+      }
+    },
+    'jumpObject1.bannerTitle': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject1.bannerTitle = val.replace(reg, '')
+      }
+    },
+    'jumpObject2.jumpurl': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject2.jumpurl = val.replace(reg, '')
+      }
+    },
+    'jumpObject2.bannerTitle': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject2.bannerTitle = val.replace(reg, '')
+      }
+    },
+    'jumpObject3.jumpurl': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject3.jumpurl = val.replace(reg, '')
+      }
+    },
+    'jumpObject3.bannerTitle': function (val) {
+      if (val.match(reg)) {
+        this.jumpObject3.bannerTitle = val.replace(reg, '')
+      }
+    },
+    visible (val) {
+      if (val) {
+        if (this.dialogType === 'add') {
+          this.clearForm()
+        } else { // this.dialogType === 'edit'
+          switch (this.poptype) {
+            case 'discoveryWindow': this.fillForm('bannerUrl'); break
+          }
+        }
+      }
+      if (!val) {
+        this.clearForm()
+        this.closeDialog()
+      }
+      this.dialogVisible = val
+    }
+  },
+  // 实例方法
+  methods: {
+    checkTime (e, list) {
+      list.forEach(item => {
+        if (e[0].getTime() < (Number(item.startTime) - 1 * 24 * 60 * 60 * 1000) && e[1].getTime() > Number(item.endTime)) {
+          this.$nextTick(() => {
+            this.dateValue = []
+            this.$message({ type: 'warning', message: '选择时间跟已有广告弹窗显示时间重复,请重新选择' })
+          })
+          return
+        }
+      })
+    },
+    timeChange (e) {
+      let list = this.dialogType === 'edit' ? this.disableTime.filter(item => { return item.id !== String(this.item.id) }) : this.disableTime
+      this.checkTime(e, list)
+      console.log(e[0].getTime(), 'timeChange')
+    },
+    pushTimeChange (value) {
+      console.log(value)
+      if (value && ((new Date(value[1]).getTime()) < new Date().getTime())) {
+        this.$message.error('定时发布结束时间不能小于当前时间！')
+        this.pushTime = ''
+      }
+    },
+    formatTime (timestamp, type = '-') {
+      timestamp = Number(timestamp)
+      let date = new Date(timestamp)
+      let Y = date.getFullYear() + type
+      let M = (date.getMonth() < 9 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + type
+      let D = (date.getDate() < 10 ? '0' + date.getDate() : date.getDate()) + ' '
+      return Y + M + D
+    },
+    appletVideoInfo (obj, id) {
+      let data = {id: Number(id)}
+      appletVideoInfo(data).then(res => {
+        if (res.code === '0') {
+          // let item = res.data
+          // this[obj].choseItemId = 'videoItem'
+          // this[obj].showChoseItem = true
+          // this[obj].choseItem = {status: item.status, hideEidt: true, check: false, id: item.id, title: item.title, thumbUrl: item.thumbUrl, openType: item.openType, views: item.views, mainBodyName: item.mainBodyName, publishTime: this.formatTime(item.publishTime, '/')}
+          let item = res.data
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'video', url: item.thumbUrl, showbelong: true, mainId: item.id, status: item.status === 3 ? 3 : Number(!item.status)})
+          // this.loadImg(this.choseItem, 'thumbnailUrl')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    queryArticleInfo (obj, id) {
+      let data = {id: Number(id)}
+      queryArticleInfo(data).then(res => {
+        if (res.code === '0') {
+          // let item = res.data
+          // this[obj].choseItemId = 'articleItem'
+          // this[obj].showChoseItem = true
+          // this[obj].choseItem = item
+          console.log(res.data, 'articleItem')
+          let item = res.data
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'article', url: item.images.length ? item.images[0] : '', showbelong: true, mainId: item.id})
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    softwareDetail (obj, id) {
+      console.log('发生发生')
+      let data = {id: Number(id)}
+      softwareDetail(data).then(res => {
+        if (res.code === '0') {
+          let item = res.data
+          console.log(item, 'item')
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'software', title: item.materialName, openType: item.openType || 0, primaryId: item.id, url: item.thumbnailUrl, status: item.materialStatus === 3 ? 3 : Number(!item.materialStatus)})
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    queryChannelInfo (obj, id) {
+      let data = {id: Number(id)}
+      queryChannelInfo(data).then(res => {
+        if (res.code === '0') {
+          let item = res.data
+          this[obj].choseItemId = 'channelItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = {status: item.status, hideEidt: true, id: item.id, check: false, iconUrl: item.iconUrl, fix: '', channelName: item.channelName, channelCatalogueName: item.channelCatalogueName, channelDesc: item.channelDesc, createBy: item.createBy, createTime: this.formatTime(item.createTime)}
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    discoveryInfo (obj, id) {
+      let data = {id: Number(id)}
+      discoveryInfo(data).then(res => {
+        if (res.code === '0') {
+          let item = res.data
+          this[obj].choseItemId = 'mainPartItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = {status: item.status, hideEidt: true, check: false, id: item.id, headImg: item.headImg, name: item.name, accountNum: item.accountNum, articleNum: item.articleNum, videoNum: item.videoNum, createBy: item.createBy, catalogueNamePath: item.catalogueNamePath, summary: item.summary, createTime: this.formatTime(item.createTime)}
+          console.log(this[obj].choseItem, 'choseItem')
+          this.loadImg(this[obj].choseItem, 'thumbnailUrl')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    getCaseBaseData (obj, caseId) {
+      let data = {caseId: caseId}
+      getCaseBaseData(data).then(res => {
+        if (res.data.code === '0') {
+          // let item = res.data.data
+          // this[obj].choseItemId = 'solutionCaseItem'
+          // this[obj].showChoseItem = true
+          // this[obj].choseItemType = 'case'
+          // this[obj].choseItem = {outsideStatus: item.outsideStatus, hideEidt: true, check: false, caseId: item.caseId, thumbnailUrl: item.externalCoverUrl, fix: '', materialName: item.title, openType: item.openType, province: item.province, city: item.city, area: item.area}
+          // console.log(this[obj].choseItem, 'choseItem')
+          // this.loadImg(this[obj].choseItem, 'thumbnailUrl')
+          let item = res.data.data
+          console.log(res.data.data)
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'case', url: item.externalCoverUrl, hideDate: true, status: item.outsideStatus === 3 ? 3 : Number(!item.outsideStatus)})
+          this.loadImg(this[obj].choseItem, 'url')
+          console.log(res.data, 'getCaseBaseData')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    changeStatus (value) { // 前端修改显示状态，后端定义为0有效，1下架，前端定义为1有效，0无效
+      switch (Number(value)) {
+        case 0:return 1
+        case 1:return 0
+      }
+    },
+    getschemeDetail (obj, solutionId) {
+      let data = {solutionId: solutionId}
+      getschemeDetail(data).then(res => {
+        if (res.data.code === '0') {
+          // let item = res.data.data
+          // this[obj].choseItemId = 'solutionCaseItem'
+          // this[obj].showChoseItem = true
+          // this[obj].choseItemType = 'solution'
+          // this[obj].choseItem = {outsideStatus: this.changeStatus(item.solutionOpenStatus), hideEidt: true, check: false, solutionId: item.solutionId, thumbnailUrl: item.solutionForeignCutUrl, fix: '', materialName: item.solutionName, openType: item.solutionOpenLevel}
+          // console.log(this[obj].choseItem, 'choseItem')
+          // this.loadImg(this[obj].choseItem, 'thumbnailUrl')
+          let item = res.data.data
+          console.log(item, 'item')
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'solution', title: item.solutionName, url: item.solutionForeignCutUrl, openType: item.solutionOpenLevel, status: item.solutionOpenStatus === 3 ? 3 : item.solutionOpenStatus, hideDate: true})
+          this.loadImg(this[obj].choseItem, 'url')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    getTime (list) {
+      this.pickerOption = Object.assign({}, this.pickerOption, {
+        disabledDate: (time) => {
+          const today = new Date().toLocaleDateString()
+          let disable = time < new Date(today)
+          list.forEach(item => {
+            disable = disable || time.getTime() > (Number(item.startTime) - 1 * 24 * 60 * 60 * 1000) && time.getTime() < Number(item.endTime)
+          })
+          return disable
+        }
+      })
+    },
+    typeChange (value) {
+      let selectObject = `jumpObject${value}`
+      this[selectObject].showChoseItem = false
+      this[selectObject].choseItem = {}
+      this[selectObject].jumpurl = ''
+    },
+    fillForm (url) { // 编辑banner图
+      console.log(this.item, 'fillForm')
+      if (this.item.startTime) {
+        this.dateValue = [new Date(this.item.startTime), new Date(this.item.endTime)]
+      }
+      let list = this.item.bannerDTOList
+      this.isEnabled = list[0].isEnabled
+      this.permanentShow = this.item.permanentShow
+      this.pushTime = [new Date(this.item.startTime), new Date(this.item.endTime)]
+      list.map(item => {
+        if (item.bannerShowType === 0) {
+          this.jumpObject1.picUrl = item.bannerUrl
+          this.jumpObject1.selectedValue = item.skipType
+          this.jumpObject1.bannerTitle = item.title
+          this.jumpObject1.id = item.id
+          this.getRelevanceData('jumpObject1', item.skipType, item.skipObject)
+        }
+        // 发现橱窗banner调整，2小图不显示
+        // else if (item.bannerShowType === 1) {
+        //   this.jumpObject2.picUrl = item.bannerUrl
+        //   this.jumpObject2.selectedValue = item.skipType
+        //   this.jumpObject2.bannerTitle = item.title
+        //   this.jumpObject2.id = item.id
+        //   this.getRelevanceData('jumpObject2', item.skipType, item.skipObject)
+        // } else {
+        //   this.jumpObject3.picUrl = item.bannerUrl
+        //   this.jumpObject3.selectedValue = item.skipType
+        //   this.jumpObject3.bannerTitle = item.title
+        //   this.jumpObject3.id = item.id
+        //   this.getRelevanceData('jumpObject3', item.skipType, item.skipObject)
+        // }
+      })
+    },
+    getRelevanceData (obj, skipType, skipObject) {
+      console.log(obj, skipType, skipObject, 'dddd')
+      switch (Number(skipType)) {
+        case 1:this.getHardwareDetail(obj, skipObject); break // 硬件
+        case 8:this[obj].jumpurl = skipObject; break
+        case 10:this[obj].jumpurl = skipObject; break
+        case 9:this.getDetailInfo(obj, skipObject); break
+        case 2:this.getschemeDetail(obj, skipObject); break
+        case 3:this.getCaseBaseData(obj, skipObject); break
+        case 7:this.discoveryInfo(obj, skipObject); break
+        case 6:this.appletVideoInfo(obj, skipObject); break
+        case 4:this.queryChannelInfo(obj, skipObject); break
+        case 5: this.queryArticleInfo(obj, skipObject); break
+        case 11: this.softwareDetail(obj, skipObject); break
+      }
+    },
+    loadImg (item, type) {
+      let img = new Image()
+      img.src = item[type]
+      img.onload = function () {
+        if (img.width / img.height > 1) {
+          Object.assign(item, {fix: 'widthFix'})
+        }
+      }
+    },
+    getDetailInfo (obj, id) {
+      let data = {id: Number(id)}
+      getDetailInfo(data).then(res => {
+        if (res.code === '0') {
+          this[obj].choseItemId = 'hardwareItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = {externalImageUrl: res.data.thumbnailUrl, name: res.data.materialName, fix: '', openType: res.data.openType, id: id}
+          console.log(this.choseItem, 'choseItem')
+          this.loadImg(this[obj].choseItem, 'externalImageUrl')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    getHardwareDetail (obj, id) {
+      let data = {hardwareId: id}
+      queryById(data).then(res => {
+        if (res.code === '0') {
+          // this[obj].choseItemId = 'hardwareItem'
+          // this[obj].showChoseItem = true
+          // this[obj].choseItem = {externalImageUrl: res.data[0].externalImageUrl, name: res.data[0].name, fix: '', openType: res.data[0].publicityGrade, id: id}
+          // console.log(this.choseItem, 'choseItem')
+          let item = res.data[0]
+          console.log(item, 'item')
+          this[obj].choseItemId = 'subjectItem'
+          this[obj].showChoseItem = true
+          this[obj].choseItem = Object.assign(item, {type: 'product', title: item.name, primaryId: item.id, hideDate: true, openType: item.publicityGrade, url: item.externalImageUrl})
+          this.loadImg(this[obj].choseItem, 'url')
+        } else {
+          this.$message.error('关联的跳转对象已删除，请重新配置!')
+        }
+      })
+    },
+    deleteimg (type) {
+      let selectObject = `jumpObject${type}`
+      this[selectObject].picUrl = ''
+    },
+    deleteItem (value) {
+      let selectObject = `jumpObject${value}`
+      this[selectObject].choseItem = {}
+      this[selectObject].choseItemId = ''
+      this[selectObject].showChoseItem = ''
+    },
+    saveItem (item) {
+      this.addDialogVisible = false
+      this.activeObject.showChoseItem = true
+      item.check = false // 去掉右上角标识
+      switch (this.activeObject.selectedValue) {
+        case 1:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {type: 'product', title: item.name, primaryId: item.id, hideDate: true, openType: item.publicityGrade, url: item.externalImageUrl}); break
+        case 2:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {type: 'solution', title: item.materialName, openType: item.openType || 0, primaryId: item.solutionId, hideDate: true, url: item.thumbnailUrl, status: item.outsideStatus === 3 ? 3 : Number(!item.outsideStatus)}); break
+        case 3:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {type: 'case', title: item.materialName, openType: item.openType || 0, primaryId: item.caseId, hideDate: true, url: item.thumbnailUrl, status: item.outsideStatus === 3 ? 3 : Number(!item.outsideStatus)}); break
+        case 7: this.activeObject.choseItemId = 'mainPartItem'; break
+        case 9:this.activeObject.choseItemId = 'hardwareItem'; break
+        case 6:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {type: 'video', url: item.thumbUrl, showbelong: true, mainId: item.id, status: item.status === 3 ? 3 : Number(!item.status)}); break
+        case 4:this.activeObject.choseItemId = 'channelItem'; break
+        case 5:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {showTemplateType: item.images.length, type: 'article', url: item.images.length ? item.images[0] : '', showbelong: true, mainId: item.id}); break
+        case 11:this.activeObject.choseItemId = 'subjectItem'; Object.assign(item, {type: 'software', title: item.title, openType: item.openType || 0, primaryId: item.id, url: item.url}); break
+      }
+      this.activeObject.choseItem = item
+      console.log(item, 'item')
+    },
+    addObject (value) {
+      console.log(this.selectedValue, 'this.selectedValue')
+      let selectObject = `jumpObject${value}`
+      this.activeObject = this[selectObject]
+      switch (this[selectObject].selectedValue) {
+        case 1:this[selectObject].componentId = 'addHardware'; this.modalTitle = '添加推荐产品'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 2:this[selectObject].componentId = 'addSolution'; this.modalTitle = '添加解决方案'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 3:this[selectObject].componentId = 'addCase'; this.modalTitle = '添加成功案例'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 7:this[selectObject].componentId = 'mainPart'; this.modalTitle = '添加主体'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 9:this[selectObject].componentId = 'addMaterial'; this.modalTitle = '添加电子物料'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 6:this[selectObject].componentId = 'addVideo'; this.modalTitle = '添加视频'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 4:this[selectObject].componentId = 'addChannel'; this.modalTitle = '添加频道'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 5:this[selectObject].componentId = 'addArticle'; this.modalTitle = '添加文章'; this.$nextTick(() => { this.addDialogVisible = true }); break
+        case 11:this[selectObject].componentId = 'addSoftware'; this.modalTitle = '添加软件'; this.$nextTick(() => { this.addDialogVisible = true }); break
+      }
+    },
+    closeDialog () {
+      this.$emit('closeDialog')
+    },
+    clearForm () {
+      // this.activeObject.jumpurl = ''
+      // this.activeObject.showChoseItem = false
+      // this.activeObject.choseItem = {}
+      // this.activeObject.choseItemId = ''
+      // this.activeObject.componentId = 'addHardware'
+      // this.activeObject.picUrl = ''
+      this.jumpObject1 = {
+        jumpurl: '',
+        choseItem: {},
+        choseItemId: '',
+        componentId: 'addHardware',
+        picUrl: '',
+        showChoseItem: false,
+        selectedValue: '',
+        bannerTitle: '',
+        choseItemType: '',
+        bannerShowType: 0
+      }
+      this.jumpObject2 = {
+        jumpurl: '',
+        choseItem: {},
+        choseItemId: '',
+        componentId: 'addHardware',
+        picUrl: '',
+        showChoseItem: false,
+        selectedValue: '',
+        bannerTitle: '',
+        choseItemType: '',
+        bannerShowType: 1
+      }
+      this.jumpObject3 = {
+        jumpurl: '',
+        choseItem: {},
+        choseItemId: '',
+        componentId: 'addHardware',
+        picUrl: '',
+        showChoseItem: false,
+        selectedValue: '',
+        bannerTitle: '',
+        choseItemType: '',
+        bannerShowType: 2
+      }
+      this.title = ''
+      this.dateValue = []
+      this.pushTime = []
+      this.isEnabled = 0
+      this.permanentShow = 1
+      // this.activeObject.selectedValue = ''
+      // this.activeObject.bannerTitle = ''
+      // this.activeObject.choseItemType = ''
+      this.addDialogVisible = false
+    },
+    save () {
+      let bannerList = []
+      let data = {
+        pushTime: this.pushTime || [],
+        isEnabled: this.isEnabled,
+        permanentShow: this.permanentShow
+      }
+      bannerList.push(this.jumpObject1)
+      console.log(bannerList, 'bannerList')
+      if (bannerList[0].selectedValue !== 0 && (JSON.stringify(bannerList[0].choseItem) === '{}' && !bannerList[0].jumpurl)) {
+        this.$message.warning('请选择跳转对象！')
+        return false
+      }
+      // else if (bannerList[1].selectedValue !== 0 && (JSON.stringify(bannerList[1].choseItem) === '{}' && !bannerList[1].jumpurl)) {
+      //   this.$message.warning('请选择小图1的跳转对象！')
+      //   return false
+      // } else if (bannerList[2].selectedValue !== 0 && (JSON.stringify(bannerList[2].choseItem) === '{}' && !bannerList[2].jumpurl)) {
+      //   this.$message.warning('请选择小图2的跳转对象！')
+      //   return false
+      // }
+      this.$emit('save', bannerList, data)
+    },
+    errorUpload () {
+      this.loading.close()
+    },
+    onSuccess (res, file, fileList, type) {
+      if (res.code === '0') {
+        this.$message({ type: 'success', message: '上传成功' })
+        this.loading.close()
+        this[type] = res.data.fileUrl
+        let selectObject = `jumpObject${type}`
+        this[selectObject].picUrl = res.data.fileUrl
+        console.log(this[selectObject].picUrl, this[selectObject], 'this[selectObject]')
+      } else {
+        this.loading.close()
+        this.$message({ type: 'error', message: '上传失败' })
+      }
+    },
+    uploadImgProcess (type) {
+      this.loading = this.$loading({
+        text: 'loading'
+      })
+      let selectObject = `jumpObject${type}`
+      this[selectObject].picUrl = ''
+    },
+    beforeImgUpload (file) {
+      console.log(file)
+      this.picInfo = file
+      const isJPG = file.type === 'image/jpeg'
+      const isPNG = file.type === 'image/png'
+      const isLt10 = file.size / 1024 / 1024 < 10
+      if (!isJPG && !isPNG) {
+        this.$message.error('上传照片只能是 JPG 或 PNG 格式!')
+      }
+      if (!isLt10) {
+        this.$message.error('上传照片大小不能超过 10MB!')
+      }
+      return (isJPG || isPNG) && isLt10
+    },
+    statusChange (value) {
+      this.pushTime = []
+      this.permanentShow = 1
+    },
+    publishTypeChange (value) {
+      this.pushTime = []
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.advertisementDialog{
+  .advertisement-dialog-content{
+    .advertisement-dialog-item{
+      // display:flex;
+      margin:15px 0 5px;
+      .item-label{
+        width:220px;
+        text-align: left;
+      }
+      .addItem{
+        position:relative;
+        &>div{
+          margin:0!important;
+        }
+      }
+      .label-left,
+      .label-right{
+        margin-left:30px;
+        position:relative;
+        .deleteImg,
+        .deleteImg1 {
+          cursor: pointer;
+          position:absolute;
+          z-index:1000;
+          background-color: white;
+          top:5px;
+          right:5px;
+          border-radius: 50%;
+          width:20px;
+          height:20px;
+          &>div{
+            position: absolute;
+            top:50%;
+            left:50%;
+            transform: translate(-50%,-50%);
+            font-size:13px;
+            color:white;
+          }
+          &>img{
+            width:100%;
+            height:100%;
+          }
+        }
+        .deleteImg1 {
+          position:absolute;
+          top:5px;
+          right:123px;
+        }
+        .avatar-uploader .el-upload {
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+          }
+          /deep/.el-upload {
+            border: 1px dashed #d9d9d9;
+            border-radius: 6px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+          }
+          .avatar-uploader .el-upload:hover {
+            border-color: #409eff;
+          }
+          .hotbanneravatar{
+             width:228px!important;
+             height:73px!important;
+          }
+          .avatar-uploader-icon {
+            font-size: 28px;
+            color: #8c939d;
+            width: 160px;
+            height: 160px;
+            line-height: 90px;
+            text-align: center;
+          }
+          .avatar {
+            width: 160px;
+            height: 160px;
+            display: block;
+          }
+      }
+      .label-left {
+        .avatar-uploader-icon {
+          font-size: 28px;
+          color: #8c939d;
+          width: 228px;
+          height: 73px;
+          // line-height: 300px;
+          text-align: center;
+        }
+        .avatar {
+          width: 228px;
+          height: 73px;
+          display: block;
+        }
+        /deep/.el-icon-plus:before {
+          content: "\E6D9";
+          font-size: 14px;
+          position: absolute;
+          top: -20px;
+          left: 50%;
+          transform: translateX(-50%);
+        }
+      }
+      .sizeTips{
+        position:absolute;
+        cursor: pointer;
+        top: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        color:#999;
+        font-size:13px;
+      }
+    }
+    .advertisement-dialog-box {
+      // padding-left: 15px;
+      margin-left: 235px;
+      .advertisement-item {
+        display: inline-block;
+        // width: 290px;
+        vertical-align: top;
+        .advertisement-dialog-item {
+          .item-label {
+            width: 70px;
+          }
+          .label-right {
+            margin-left: 0;
+          }
+        }
+        i {
+          color: #CA1D22
+        }
+      }
+    }
+  }
+}
+</style>
