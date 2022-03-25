@@ -1,0 +1,861 @@
+    search () {
+      // 数组结构
+      let [startTime, endTime] = this.daterange || []
+      this.ruleForm.startTime = startTime ? startTime + ' 00:00:00' : startTime
+      this.ruleForm.endTime = endTime ? endTime + ' 23:59:59' : endTime
+      this.ruleForm.pageNum = 1
+      this.getAlbumList()
+    },
+    <!--
+ * @Descripttion: 推广管理 - 基本信息
+ * @version: ~
+ * @Author: lidongdong19
+ * @Date: 2021-09-26 11:24:28
+ * @LastEditors: lidongdong19
+ * @LastEditTime: 2022-03-21 10:28:18
+-->
+
+<template>
+  <div class="container">
+    <card title="基本信息">
+      <template slot="actions" v-if="promotionAuth.admin">
+        <el-button
+          type="primary"
+          @click="onAction"
+          v-if="!isEdit"
+          v-dmpauth="'cl_admin_edit'"
+          >编 辑</el-button
+        >
+        <div class="saveBtn" v-else>
+          <el-button type="primary" @click="saveInformation('save')"
+            >保 存</el-button
+          >
+          <el-button @click="saveInformation">取 消</el-button>
+        </div>
+      </template>
+      <div class="content" v-loading="fromLoading">
+        <div v-if="isEdit" class="message-edit">
+          <div class="form-box">
+            <el-form
+              ref="ruleForm"
+              :model="ruleForm"
+              class="basic-form"
+              :rules="rules"
+              label-width="150px"
+              size="mini"
+            >
+              <el-row>
+                <el-col :span="16">
+                  <el-form-item label="推广名称：" prop="name">
+                    <el-input
+                      v-model.trim="ruleForm.name"
+                      placeholder="请输入"
+                      :maxlength="50"
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="推广类型：" prop="type">
+                    <el-select v-model="ruleForm.type" placeholder="请选择">
+                      <el-option
+                        v-for="v in promotionOptions"
+                        :key="v.key"
+                        :label="v.value"
+                        :value="v.key"
+                      ></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row>
+                <el-col :span="8">
+                  <el-form-item prop="startTime" label="推广开始日期：">
+                    <el-date-picker
+                      type="date"
+                      placeholder="请选择日期"
+                      v-model="ruleForm.startTime"
+                      style="width: 100%"
+                      format="yyyy-MM-dd"
+                      value-format="yyyy-MM-dd"
+                    ></el-date-picker>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item prop="endTime" label="推广结束日期：">
+                    <el-date-picker
+                      type="date"
+                      placeholder="请选择日期"
+                      v-model="ruleForm.endTime"
+                      style="width: 100%"
+                      format="yyyy-MM-dd"
+                      value-format="yyyy-MM-dd"
+                    ></el-date-picker>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="推广子类型：" prop="childType">
+                    <el-select
+                      v-model="ruleForm.childType"
+                      placeholder="请选择"
+                    >
+                      <el-option
+                        v-for="v in childTypeOptions"
+                        :key="v.key"
+                        :label="v.value"
+                        :value="v.key"
+                      ></el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row>
+                <el-col :span="8">
+                  <el-form-item label="行业：">
+                    <el-input
+                      @click.native="selIndustry"
+                      v-model="ruleForm.industryName"
+                      @focus="onIndustryClick"
+                      readonly
+                    >
+                      <img
+                        src="../../../../../assets/dmp/icon/u3164.png"
+                        alt=""
+                        slot="suffix"
+                        class="suffix-img"
+                      />
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item label="推广业务：">
+                    <el-input
+                      @click.native="selBusiness"
+                      style="width: auto"
+                      v-model="ruleForm.businessName"
+                      @focus="onPromotionBizClick"
+                      readonly
+                    >
+                      <img
+                        src="../../../../../assets/dmp/icon/u3164.png"
+                        alt=""
+                        slot="suffix"
+                        class="suffix-img"
+                      />
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="8">
+                  <el-form-item
+                    label="CL线索未转化标签名："
+                    prop="clClueNoChange"
+                  >
+                    <el-input
+                      v-model.trim="ruleForm.clClueNoChange"
+                      placeholder="请输入"
+                      :maxlength="50"
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </div>
+        </div>
+        <div v-else class="message-show">
+          <div class="item">
+            <div class="message-item" style="width: 66.6%">
+              <div class="message-item-title">推广主题名称：</div>
+              <div class="message-item-value">{{ cloneRuleForm.name }}</div>
+            </div>
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 148px; text-align: right"
+              >
+                推广类型：
+              </div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.type | formatOptions }}
+              </div>
+            </div>
+          </div>
+          <div class="item newItem">
+            <div class="message-item">
+              <div class="message-item-title">推广开始日期：</div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.newStartTime }}
+              </div>
+            </div>
+            <div class="message-item">
+              <div class="message-item-title">推广结束日期：</div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.newEndTime }}
+              </div>
+            </div>
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 148px; text-align: right"
+              >
+                推广子类型：
+              </div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.childType | formatChildOptions }}
+              </div>
+            </div>
+          </div>
+          <div class="item newItem">
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 98px; text-align: right"
+              >
+                行业：
+              </div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.industryName }}
+              </div>
+            </div>
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 100px; text-align: right"
+              >
+                推广业务：
+              </div>
+              <div class="message-item-value">
+                <div class="outsideWrap">
+                  <el-tooltip
+                    v-if="
+                      cloneRuleForm.businessName &&
+                      cloneRuleForm.businessName.length > 30
+                    "
+                    effect="light"
+                    placement="top"
+                  >
+                    <div slot="content" class="content-business">
+                      {{ cloneRuleForm.businessName }}
+                    </div>
+                    <input
+                      id="checkbox1"
+                      type="checkbox"
+                      class="checkboxClass"
+                    />
+                    <div class="insideWrap" id="insideWrap">
+                      <label for="checkbox1" class="btnClass"></label>
+                      <span>{{ cloneRuleForm.businessName }}</span>
+                    </div>
+                  </el-tooltip>
+                  <p v-else>{{ cloneRuleForm.businessName }}</p>
+                </div>
+              </div>
+            </div>
+            <div class="message-item">
+              <div
+                class="message-item-title"
+                style="min-width: 150px; text-align: right"
+              >
+                CL线索未转化标签名：
+              </div>
+              <div class="message-item-value">
+                {{ cloneRuleForm.clClueNoChange }}
+                <div class="sync">
+                  <el-button type="text" @click="syncTag">
+                    <img :src="sync" alt="">
+                    同步标签
+                  </el-button>
+                  <span v-if="!!cloneRuleForm.clClueNoChangeId"><i class="h-icon-success-fill"></i> 成功</span>
+                  <span v-else><i class="h-icon-warning-fill"></i>待同步</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </card>
+    <el-dialog
+      title="选择行业"
+      :visible.sync="dialogVisible"
+      width="600px"
+      :destroy-on-close="true"
+    >
+      <div style="margin: 0 auto">
+        <el-transfer
+          v-model="transferIndustry"
+          :data="industrys"
+          :titles="['行业列表', '已选']"
+          filterable
+          :filter-method="filterMethod"
+          :props="{ key: 'baseCode', label: 'baseValue' }"
+          @click="cancelIndustry()"
+        >
+        </el-transfer>
+        <el-button
+          style="margin-left: 480px; margin-top: 15px"
+          type="primary"
+          @click="conmfirmIndustry()"
+          >确 定</el-button
+        >
+      </div>
+    </el-dialog>
+    <el-dialog
+      title="选择推广业务"
+      :visible.sync="dialogVisibleBusiness"
+      width="600px"
+      :destroy-on-close="true"
+    >
+      <div style="margin: 0 auto">
+        <el-transfer
+          v-loading="loading"
+          v-model="transferBusiness"
+          :data="businessList"
+          :titles="['推广业务', '已选']"
+          filterable
+          :filter-method="filterMethod"
+          :props="{ key: 'subBusinessId', label: 'baseValue' }"
+        >
+        </el-transfer>
+        <el-button
+          style="margin-left: 480px; margin-top: 15px"
+          type="primary"
+          @click="conmfirmPromotionBiz()"
+          >确 定</el-button
+        >
+      </div>
+    </el-dialog>
+  </div>
+</template>
+
+<script>
+import { baseValueConfigQuery, selectSubBusiness, messageBaseEditAPI, messageBaseQueryAPI, postSyncTag } from '@/service/dmp/api'
+import card from './card'
+import dayjs from 'dayjs'
+import { mapMutations, mapState } from 'vuex'
+import sync from '@/assets/dmp/icon/sync.png'
+export default {
+  name: '',
+  // 接收父组件传入的参数
+  props: {
+
+  },
+  // 注册组件
+  components: {
+    card
+  },
+  // 数据
+  data () {
+    let checkStartDate = (rule, value, callback) => {
+      if (!value) {
+        this.$refs.ruleForm.clearValidate('endTime')
+        return callback(new Error('请选择日期'))
+      } else if (!this.ruleForm.endTime) {
+        this.$refs.ruleForm.clearValidate('endTime')
+        callback()
+      } else {
+        if (new Date(value).getTime() <= new Date(this.ruleForm.endTime).getTime()) {
+          this.$refs.ruleForm.clearValidate('endTime')
+          callback()
+        } else {
+          callback(new Error('开始日期需要小于等于结束日期'))
+        }
+      }
+    }
+    let checkEndDate = (rule, value, callback) => {
+      if (!value) {
+        this.$refs.ruleForm.clearValidate('startTime')
+        return callback(new Error('请选择日期'))
+      } else if (!this.ruleForm.startTime) {
+        this.$refs.ruleForm.clearValidate('startTime')
+        callback()
+      } else {
+        if (new Date(value).getTime() >= new Date(this.ruleForm.startTime).getTime()) {
+          this.$refs.ruleForm.clearValidate('startTime')
+          callback()
+        } else {
+          callback(new Error('结束日期需要大于等于开始日期'))
+        }
+      }
+    }
+    return {
+      sync,
+      fromLoading: false,
+      needShowExpande: false,
+      filterMethod (query, item) {
+        return item.baseValue.indexOf(query) > -1
+      },
+      promotionOptions: [
+        { value: '重点营销推广', key: 16 },
+        { value: '产品日常推广', key: 13 },
+        { value: '解决方案日常推广', key: 14 },
+        { value: '业务日常推广', key: 15 }
+      ],
+      childTypeOptions: [
+        { value: '通用', key: 40 },
+        { value: '招募', key: 41 },
+        { value: '客户反馈类', key: 42 },
+        { value: '调研问卷类', key: 43 }
+      ],
+      loading: false,
+      promotionBusinessList: [],
+      dialogVisibleBusiness: false,
+      businessList: [],
+      industrys: [],
+      isEdit: false,
+      dialogVisible: false,
+      cloneRuleForm: {},
+      transferIndustry: [],
+      transferBusiness: [],
+      ruleForm: {
+        childType: '',
+        name: '',
+        startTime: '',
+        endTime: '',
+        type: '',
+        clClueNoChange: '',
+        industryName: '',
+        businessName: ''
+      },
+      rules: {
+        name: [
+          { required: true, message: '请输入活动名称', trigger: 'blur' }
+        ],
+        startTime: [
+          { required: true, message: '请选择日期', trigger: 'blur' },
+          { validator: checkStartDate, trigger: 'blur' }
+        ],
+        endTime: [
+          { required: true, message: '请选择日期', trigger: 'blur' },
+          { validator: checkEndDate, trigger: 'blur' }
+        ],
+        type: [
+          { required: true, message: '请选择推广类型', trigger: 'change' }
+        ],
+        clClueNoChange: [
+          { required: true, message: '请输入线索名', trigger: 'blur' }
+        ]
+      }
+    }
+  },
+  // vue实例被创建时
+  created () {
+    this.getIndustry()
+  },
+  // vue实例被挂载至dom上时
+  mounted () {
+    this.getQueryBaseList()
+    this.transferIndustry.join(',') ? this.getSelectSubBusiness(this.transferIndustry) : this.getSelectSubBusiness()
+  },
+  // keep-alive之后页面会缓存，不会执行created(),和mounted(),但是会执行activated()
+  activated () { },
+  // 退出的生命周期钩子
+  deactivated () { },
+  // 销毁
+  destroyed () { },
+  filters: {
+    formatOptions (val) {
+      switch (val) {
+        case 13:
+          return '产品日常推广'
+        case 14:
+          return '解决方案日常推广'
+        case 15:
+          return '业务日常推广'
+        case 16:
+          return '重点营销推广'
+        default:
+          return ''
+      }
+    },
+    formatChildOptions (val) {
+      switch (val) {
+        case 40:
+          return '通用'
+        case 41:
+          return '招募'
+        case 42:
+          return '客户反馈类'
+        case 43:
+          return '调研问卷类'
+        default:
+          return ''
+      }
+    }
+  },
+  // 属性值计算
+  computed: {
+    ...mapState({
+      promotionAuth: state => state.promotion.promotionAuth
+    }),
+    id () {
+      return this.$route.query.id
+    }
+  },
+  // 数据侦听
+  watch: {
+    isEdit: function (value) {
+      this.setActiveEditStauts({
+        section: '基本信息',
+        isEdit: value
+      })
+    }
+  },
+  // 实例方法
+  methods: {
+    ...mapMutations({
+      'setMarketEventName': 'setMarketEventName',
+      'setActiveEditStauts': 'setActiveEditStauts',
+      'setValidFrom': 'setValidFrom',
+      'setChildType': 'setChildType'
+    }),
+    syncTag () {
+      // 同步标签
+      postSyncTag({
+        id: this.id
+      })
+      .then((res) => {
+        if (res.code === '0') {
+          this.$message.success('同步成功')
+          this.getQueryBaseList()
+        } else {
+          this.$message.error(res.message)
+        }
+      })
+      .catch((err) => {
+        this.$message.error(err.message)
+      })
+    },
+    // 推广业务点击
+    onPromotionBizClick () {
+      let temp = []
+      this.businessList.forEach(item => {
+        if (this.ruleForm.businessName.includes(item.baseValue)) {
+          temp.push(item.subBusinessId)
+        }
+      })
+      this.transferBusiness = temp
+      this.dialogVisibleBusiness = true
+      this.transferIndustry.join(',') ? this.getSelectSubBusiness(this.transferIndustry) : this.getSelectSubBusiness()
+    },
+    // 推广行业点击
+    onIndustryClick () {
+      let temp = []
+      this.industrys.forEach(item => {
+        if (this.ruleForm.industryName) {
+          if (this.ruleForm.industryName.includes(item.baseValue)) {
+            temp.push(item.baseCode)
+          }
+        }
+      })
+      this.transferIndustry = temp
+      this.dialogVisible = true
+    },
+    // 推广业务弹窗点击
+    conmfirmPromotionBiz () {
+      let temp = []
+      this.businessList.forEach(item => {
+        if (this.transferBusiness.includes(item.subBusinessId)) {
+          temp.push(item.baseValue)
+        }
+      })
+      this.ruleForm.businessName = temp.join(',')
+      this.dialogVisibleBusiness = false
+    },
+    // 推广行业弹窗点击
+    conmfirmIndustry () {
+      let names = []
+      this.industrys.forEach(item => {
+        if (this.transferIndustry.includes(item.baseCode)) {
+          names.push(item.baseValue)
+        }
+      })
+      this.ruleForm.industryName = names.join(',')
+      this.dialogVisible = false
+    },
+    getQueryBaseList () {
+      this.fromLoading = true
+      messageBaseQueryAPI({ id: this.id }).then(res => {
+        let data = res.data
+        if (res.code === '0') {
+          const { name, type, clClueNoChange, promotionBusinessName, industryName, childType, industryCode, promotionBusiness } = data
+          let options = {
+            newStartTime: data.startTime ? dayjs(data.startTime).format('YYYY-MM-DD') : '',
+            newEndTime: data.endTime ? dayjs(data.endTime).format('YYYY-MM-DD') : '',
+            businessName: data.promotionBusinessName
+          }
+          this.setMarketEventName(data.name)
+          this.setValidFrom({
+            name: name,
+            startTime: options['newStartTime'],
+            endTime: options['newEndTime'],
+            clClueNoChange: clClueNoChange
+          })
+          this.transferIndustry = industryCode ? industryCode.split(',') : []
+          this.transferBusiness = promotionBusiness ? promotionBusiness.split(',') : []
+          this.ruleForm = {
+            name: name,
+            type: type,
+            clClueNoChange: clClueNoChange,
+            businessName: promotionBusinessName,
+            industryName: industryName,
+            childType: childType,
+            startTime: options['newStartTime'],
+            endTime: options['newEndTime']
+          }
+          this.cloneRuleForm = { ...data, ...options }
+          this.setChildType(this.ruleForm.childType)
+        } else {
+          this.$message.error(res.message)
+        }
+        this.fromLoading = false
+      })
+    },
+    getSelectSubBusiness (data) {
+      this.loading = true
+      selectSubBusiness({ industryCodes: data }).then(res => {
+        if (res.code === '0') {
+          this.loading = false
+          this.businessList = res.data.subBusinessList || []
+          this.businessList.forEach(item => {
+            item.baseValue = item.subBusiness
+          })
+        } else {
+          this.loading = false
+          this.$message({
+            type: 'error',
+            message: res.message
+          })
+        }
+      }).catch(error => {
+        this.loading = false
+        console.log(error)
+      })
+    },
+    getIndustry () { // 行业列表接口
+      let options = {
+        type: 'industryType'
+      }
+      baseValueConfigQuery(options).then(res => {
+        if (res.code === '0') {
+          this.industrys = res.data || []
+        } else {
+          this.$message({
+            type: 'error',
+            message: res.message
+          })
+        }
+      })
+    },
+    selBusiness () {
+      this.dialogVisibleBusiness = true
+      this.transferIndustry.join(',') ? this.getSelectSubBusiness(this.transferIndustry) : this.getSelectSubBusiness()
+    },
+    selIndustry () {
+      this.dialogVisible = true
+    },
+    onAction () {
+      this.isEdit = !this.isEdit
+    },
+    saveInformation (v) {
+      let { name, startTime, endTime, type, childType, clClueNoChange } = this.ruleForm
+      let options = {
+        id: this.id,
+        clClueNoChange: clClueNoChange,
+        name: name,
+        startTime: startTime.trim(),
+        endTime: endTime.trim(),
+        type: type,
+        childType: childType,
+        industryCode: this.transferIndustry.join(',') || '',
+        promotionBusiness: this.transferBusiness.join(',') || ''
+      }
+      if (v === 'save') {
+        this.$refs['ruleForm'].validate((valid) => {
+          if (valid) {
+            this.$confirm('确认保存当前信息?', '提示', {
+              confirmButtonText: '确 定',
+              cancelButtonText: '取 消',
+              type: 'warning'
+            }).then(() => {
+              this.fromLoading = true
+              messageBaseEditAPI(options).then(res => {
+                if (res.code === '0') {
+                  this.fromLoading = false
+                  this.isEdit = false
+                  this.getQueryBaseList()
+                  this.$message({
+                    type: 'success',
+                    message: '保存成功'
+                  })
+                  this.setChildType(this.ruleForm.childType)
+                } else {
+                  this.fromLoading = false
+                  this.$message({
+                    type: 'error',
+                    message: res.message
+                  })
+                }
+              })
+            }).catch(() => {
+              this.fromLoading = false
+              this.$message({
+                type: 'info',
+                message: '已取消保存'
+              })
+            })
+          } else {
+            return false
+          }
+        })
+      } else {
+        this.$confirm('您确认放弃当前数据的更改吗?', '提示', {
+          confirmButtonText: '确认放弃',
+          cancelButtonText: '继续编辑',
+          type: 'warning'
+        })
+          .then((res) => {
+            this.$refs['ruleForm'].resetFields()
+            this.isEdit = false
+          })
+          .catch((err) => {
+            this.isEdit = true
+            console.log(err)
+          })
+      }
+    }
+  }
+}
+</script>
+
+<style lang="less" scoped>
+.content-business {
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 18px;
+}
+.item {
+  display: flex;
+  .message-item {
+    margin-bottom: 12px;
+    display: flex;
+    &-title {
+      color: #666;
+    }
+    &-value {
+      color: #3a3a3a;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      .sync {
+        span {
+          font-size: 12px;
+          color: #666666;
+        }
+        i {
+          vertical-align: middle;
+        }
+        .h-icon-success-fill{
+          color: #449F2D;
+        }
+        .h-icon-warning-fill {
+          color: #E0363B;
+        }
+      }
+    }
+  }
+}
+.newItem {
+  .message-item {
+    flex: 1;
+  }
+}
+
+.content {
+  padding: 12px 0;
+  /deep/.el-input__suffix-inner img {
+    vertical-align: -3px;
+  }
+  .message-show {
+    padding: 0 20px;
+  }
+  .message-edit {
+    .form-box {
+      padding-right: 16px;
+      max-width: 1276px;
+    }
+    .basic-form {
+      /deep/.el-input {
+        display: block;
+      }
+      /deep/.el-select {
+        display: block;
+      }
+    }
+  }
+}
+.outsideWrap {
+  display: flex;
+  box-shadow: 0 2px 10px #999, 0 -2px 10px #fff;
+  overflow: hidden;
+  /* 隐藏的 checkbox 样式 */
+  .checkboxClass {
+    display: none;
+    &:checked {
+      & + .insideWrap {
+        max-height: none;
+        &::after {
+          visibility: hidden;
+        }
+        .btnClass {
+          &::before {
+            visibility: hidden;
+          }
+        }
+      }
+    }
+  }
+  /* 文本框样式 */
+  .insideWrap {
+    position: relative;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #333;
+    max-height: 4.5em; // 与 line-height 一起决定了最多展示几行
+    overflow: hidden;
+    text-overflow: ellipsis;
+    &::before {
+      content: "";
+      height: calc(100% - 21px); // 减去按钮高度
+      float: right;
+    }
+    &::after {
+      position: absolute;
+      content: "";
+      width: 99vw;
+      height: 99vw;
+      box-shadow: -99vw -99vw 0 0 #fff inset;
+    }
+    /* 展开收起按钮样式 */
+    .btnClass {
+      position: relative;
+      float: right;
+      clear: both;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-left: 1em; // 留出省略号的空间
+      margin-right: 0.5em; // 留出文字右边距离
+      color: #1585ff;
+      cursor: pointer;
+      &::before {
+        position: absolute;
+        content: "...";
+        top: -10px;
+        color: #333;
+        left: -0.25em;
+        transform: translateX(-100%);
+      }
+    }
+  }
+}
+</style>
