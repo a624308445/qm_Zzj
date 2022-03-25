@@ -1,0 +1,72 @@
+    let checkStartDate = (rule, value, callback) => {
+      if (!value) {
+        this.$refs.ruleForm.clearValidate('endTime')
+        return callback(new Error('请选择日期'))
+      } else if (!this.ruleForm.endTime) {
+        this.$refs.ruleForm.clearValidate('endTime')
+        callback()
+      } else {
+        if (new Date(value).getTime() <= new Date(this.ruleForm.endTime).getTime()) {
+          this.$refs.ruleForm.clearValidate('endTime')
+          callback()
+        } else {
+          callback(new Error('开始日期需要小于等于结束日期'))
+        }
+      }
+    }
+    let checkEndDate = (rule, value, callback) => {
+      if (!value) {
+        this.$refs.ruleForm.clearValidate('startTime')
+        return callback(new Error('请选择日期'))
+      } else if (!this.ruleForm.startTime) {
+        this.$refs.ruleForm.clearValidate('startTime')
+        callback()
+      } else {
+        if (new Date(value).getTime() >= new Date(this.ruleForm.startTime).getTime()) {
+          this.$refs.ruleForm.clearValidate('startTime')
+          callback()
+        } else {
+          callback(new Error('结束日期需要大于等于开始日期'))
+        }
+      }
+    }
+    
+    
+          getQueryBaseList () {
+        this.fromLoading = true
+        messageBaseQueryAPI({ id: this.id }).then(res => {
+          let data = res.data
+          if (res.code === '0') {
+            const { name, type, clClueNoChange, promotionBusinessName, industryName, childType, industryCode, promotionBusiness } = data
+            let options = {
+              newStartTime: data.startTime ? dayjs(data.startTime).format('YYYY-MM-DD') : '',
+              newEndTime: data.endTime ? dayjs(data.endTime).format('YYYY-MM-DD') : '',
+              businessName: data.promotionBusinessName
+            }
+            this.setMarketEventName(data.name)
+            this.setValidFrom({
+              name: name,
+              startTime: options['newStartTime'],
+              endTime: options['newEndTime'],
+              clClueNoChange: clClueNoChange
+            })
+            this.transferIndustry = industryCode ? industryCode.split(',') : []
+            this.transferBusiness = promotionBusiness ? promotionBusiness.split(',') : []
+            this.ruleForm = {
+              name: name,
+              type: type,
+              clClueNoChange: clClueNoChange,
+              businessName: promotionBusinessName,
+              industryName: industryName,
+              childType: childType,
+              startTime: options['newStartTime'],
+              endTime: options['newEndTime']
+            }
+            this.cloneRuleForm = { ...data, ...options }
+            this.setChildType(this.ruleForm.childType)
+          } else {
+            this.$message.error(res.message)
+          }
+          this.fromLoading = false
+        })
+      },
